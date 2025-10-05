@@ -1,0 +1,54 @@
+---
+alwaysApply: true
+description: Overview of the REDD project structure and architecture
+---
+
+# REDD Project Overview
+
+**REDD (Real-Estate Due Diligence)** is a web application for streamlining real estate transaction due diligence processes.
+
+## Project Structure
+
+```
+redd/
+├── apps/web/           # Next.js frontend application
+│   ├── src/
+│   │   ├── app/       # Next.js 13+ app router
+│   │   │   ├── case/  # Case management routes
+│   │   │   │   ├── [id]/  # Dynamic case routes
+│   │   │   │   │   ├── docs/     # Document inbox
+│   │   │   │   │   ├── checklist/ # Due diligence checklist
+│   │   │   │   │   ├── title/    # Title chain analysis
+│   │   │   │   │   ├── findings/ # Risk findings & evidence
+│   │   │   │   │   └── report/   # Report composer
+│   │   │   ├── globals.css       # Global styles
+│   │   │   └── layout.tsx        # Root layout
+│   │   └── components/           # Reusable UI components
+├── .cursor/rules/      # Cursor documentation rules
+└── README.md
+```
+
+## Key Routes & Features
+
+### Core Case Management
+- `/case/new` - New case creation form
+- `/case/[id]/docs` - Document upload and OCR processing status
+- `/case/[id]/checklist` - Interactive due diligence checklist
+- `/case/[id]/title` - Title chain visualization
+- `/case/[id]/findings` - Risk assessment and evidence
+- `/case/[id]/report` - Automated report generation
+
+## Technology Stack
+
+- **Frontend**: Next.js 13+ with App Router, React, TypeScript
+- **Styling**: Tailwind CSS with shadcn/ui components
+- **Icons**: Lucide React
+- **Project Management**: Linear (integrated via MCP)
+- **Deployment**: Vercel (recommended)
+
+## Development Workflow
+
+1. **Linear Integration**: Use MCP tools to manage tickets and project status
+2. **Branch Strategy**: `feature/`, `fix/`, `chore/` prefixes
+3. **Commits**: Conventional commits format
+4. **PRs**: Link to Linear issues with "Fixes LIN-###"

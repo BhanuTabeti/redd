@@ -1,0 +1,396 @@
+---
+alwaysApply: true
+description: Cursor Dev Agent system prompt for REDD development
+---
+
+# Cursor Dev Agent Prompt
+
+**System Prompt (paste as is in Cursor):**
+
+```
+You are "Cursor Dev (REDD)", a senior full-stack developer working with a PM on the Real-Estate Due Diligence (REDD) product. Speak like a teammate; one question max per turn. Default to action with clearly labeled [ASSUMPTION]s.
+
+CHAIN OF COMMAND
+- PM (user) owns scope/priorities. You own implementation, PRs, tests, automations.
+- Use Linear via MCP for planning/status. Use GitHub for code/PRs.
+
+TOOLING
+- Linear MCP: create/update issues, labels, projects, move states, comment.
+- Git/GitHub: branches, commits, PRs, request review. Link Linear issue in PR ("Fixes LIN-###").
+
+WORKING AGREEMENTS
+- Branches: feature/<kebab>, fix/<kebab>, chore/<kebab>
+- Commits: Conventional Commits
+- PRs: small, context + screenshots + checkboxes, auto-close Linear issue on merge.
+
+DEFINITION OF DONE (each ticket)
+- Working code + tests; error/empty/loading states; basic a11y; analytics events if defined; linked PR merged; Linear → Done.
+
+STATUS PROTOCOL
+- On start: claim issue, move to In Progress, comment plan.
+- On PR: paste link in Linear, request review from PM.
+- On block: move to Blocked, comment cause + unblock proposal.
+
+KICKOFF CHECKLIST
+1) Ensure Linear project "REDD v1" exists with labels/states (v1, frontend, backend, ml, infra, design, security, docs, p0, p1).
+2) Import "M0 – UI Demo Flow" CSV if not present.
+3) Create repo scaffold (apps/web Next.js+Tailwind+shadcn/ui). Add PR template + CODEOWNERS.
+4) Start with "App scaffold", then the route tickets. Post preview link when ready.
+
+DEFAULT STACK [ASSUMPTION]
+- Next.js/React + Tailwind (shadcn/ui), lucide-react
+```
+
+**Setup Instructions for Cursor:**
+
+1. Open Cursor → **Settings → Integrations / MCP**.
+2. **Add Linear** and paste a **Linear API Key** (Linear → Settings → API → "Create API Key").
+3. Create a new chat in Cursor and paste the above prompt as the **system** message.
+4. In that same Cursor chat, send:
+
+```
+Use Linear MCP. Open project "REDD v1". Claim the M0 epic and the "App scaffold" ticket. Start work now. Report plan in a comment and open a PR when scaffold builds locally.
+```
+
+## REDD Demo UI Flow Code
+
+The following is the starter code for the REDD demo UI. This should be placed in `apps/web/src/app/demo/page.tsx` to create a clickable demo of the entire flow:
+
+```tsx
+import React, { useMemo, useState } from "react";
+import { Check, ChevronLeft, ChevronRight, FileText, FolderPlus, ShieldAlert, Timer, UploadCloud, Workflow } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
+
+// ---
+// REDD Demo UI Flow
+// A single-file, click-through mock that simulates the v1 screens
+// New Case → Docs Inbox → Checklist → Title Chain → Findings → Report
+// No external data; purely client-side state. Replace with real APIs later.
+// ---
+
+export default function REDD_Demo() {
+  const steps = useMemo(
+    () => [
+      { id: "new-case", label: "New Case" },
+      { id: "docs", label: "Document Inbox" },
+      { id: "checklist", label: "Checklist & Gaps" },
+      { id: "title", label: "Title Chain" },
+      { id: "findings", label: "Findings" },
+      { id: "report", label: "Report" },
+    ],
+    []
+  );
+  const [stepIndex, setStepIndex] = useState(0);
+  const [caseForm, setCaseForm] = useState({ state: "Karnataka", city: "Bengaluru", propertyId: "Survey 42/1A", buyer: "Acme LLP", seller: "Rao Family" });
+  const [docs, setDocs] = useState([
+    { name: "Sale Deed 2019.pdf", status: "Parsed" },
+    { name: "EC_2015_2024.pdf", status: "OCR" },
+    { name: "Khata_Extract.jpg", status: "Uploaded" },
+  ]);
+  const [check, setCheck] = useState([
+    { key: "ec", text: "Encumbrance Certificate (10 yrs)", done: false },
+    { key: "khata", text: "Khata Extract / Katha Certificate", done: true },
+    { key: "rtc", text: "RTC / Record of Rights (latest)", done: false },
+    { key: "id_proofs", text: "Parties ID proofs (PAN/Aadhaar)", done: true },
+  ]);
+
+  const pct = Math.round(((stepIndex + 1) / steps.length) * 100);
+
+  return (
+    <div className="min-h-screen bg-neutral-950 text-neutral-50">
+      <header className="sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950/70 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div className="grid h-9 w-9 place-items-center rounded-xl bg-violet-600/20 ring-1 ring-violet-500/30">
+              <Workflow className="h-5 w-5 text-violet-400" />
+            </div>
+            <div>
+              <div className="text-sm uppercase tracking-wider text-neutral-400">REDD</div>
+              <div className="text-lg font-semibold">Demo UI Flow</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="border-neutral-700 text-neutral-300">Mock</Badge>
+            <Badge className="bg-emerald-600">v1</Badge>
+          </div>
+        </div>
+        <div className="mx-auto max-w-6xl px-4 pb-3">
+          <Progress value={pct} className="h-1" />
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-6">
+        <Stepper steps={steps} activeIndex={stepIndex} onSelect={setStepIndex} />
+
+        <div className="mt-6 grid gap-6">
+          {steps[stepIndex].id === "new-case" && (
+            <ScreenNewCase caseForm={caseForm} setCaseForm={setCaseForm} />
+          )}
+          {steps[stepIndex].id === "docs" && (
+            <ScreenDocs docs={docs} setDocs={setDocs} />
+          )}
+          {steps[stepIndex].id === "checklist" && (
+            <ScreenChecklist items={check} setItems={setCheck} />
+          )}
+          {steps[stepIndex].id === "title" && <ScreenTitleChain />}
+          {steps[stepIndex].id === "findings" && <ScreenFindings />}
+          {steps[stepIndex].id === "report" && <ScreenReport />}
+        </div>
+
+        <div className="mt-8 flex items-center justify-between">
+          <Button variant="ghost" disabled={stepIndex === 0} onClick={() => setStepIndex((i) => Math.max(0, i - 1))}>
+            <ChevronLeft className="mr-2 h-4 w-4" /> Back
+          </Button>
+          <div className="text-sm text-neutral-400">Step {stepIndex + 1} of {steps.length}</div>
+          <Button onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))}>
+            Next <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="mt-8 text-xs text-neutral-500">
+          <p>Notes: This mock models the UX only. Replace with real data sources and API calls. Each screen has TODOs inside the code to guide integration.</p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function Stepper({ steps, activeIndex, onSelect }: { steps: { id: string; label: string }[]; activeIndex: number; onSelect: (i: number) => void }) {
+  return (
+    <div className="grid grid-cols-6 gap-2">
+      {steps.map((s, i) => (
+        <button
+          key={s.id}
+          onClick={() => onSelect(i)}
+          className={`group flex items-center justify-between rounded-xl border px-3 py-2 text-left ${
+            i === activeIndex ? "border-violet-500/60 bg-violet-600/10" : "border-neutral-800 hover:border-neutral-700"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className={`h-6 w-6 shrink-0 rounded-full text-center text-xs leading-6 ${i <= activeIndex ? "bg-violet-600" : "bg-neutral-800"}`}>{i + 1}</span>
+            <span className="text-sm text-neutral-200">{s.label}</span>
+          </div>
+          {i < activeIndex && <Check className="h-4 w-4 text-emerald-400" />}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ScreenNewCase({ caseForm, setCaseForm }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>New Case</CardTitle>
+        <CardDescription>Capture jurisdiction & property basics. <span className="text-amber-400">[ASSUMPTION]</span> Karnataka-first.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4 md:grid-cols-2">
+        <Labeled label="State">
+          <Input value={caseForm.state} onChange={(e) => setCaseForm({ ...caseForm, state: e.target.value })} />
+        </Labeled>
+        <Labeled label="City">
+          <Input value={caseForm.city} onChange={(e) => setCaseForm({ ...caseForm, city: e.target.value })} />
+        </Labeled>
+        <Labeled label="Property ID (Survey/Khata)">
+          <Input value={caseForm.propertyId} onChange={(e) => setCaseForm({ ...caseForm, propertyId: e.target.value })} />
+        </Labeled>
+        <Labeled label="Buyer">
+          <Input value={caseForm.buyer} onChange={(e) => setCaseForm({ ...caseForm, buyer: e.target.value })} />
+        </Labeled>
+        <Labeled label="Seller">
+          <Input value={caseForm.seller} onChange={(e) => setCaseForm({ ...caseForm, seller: e.target.value })} />
+        </Labeled>
+        <div className="md:col-span-2 text-xs text-neutral-500">TODO: Validation, role permissions, autosave, analytics (case_created)</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScreenDocs({ docs, setDocs }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Document Inbox</CardTitle>
+        <CardDescription>Upload PDFs/images, watch statuses progress: Uploaded → OCR → Parsed.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-4 flex items-center justify-between">
+          <Button variant="secondary"><UploadCloud className="mr-2 h-4 w-4"/>Upload</Button>
+          <div className="text-xs text-neutral-500">TODO: drag & drop, file restrictions, retry, delete.</div>
+        </div>
+        <div className="grid gap-3">
+          {docs.map((d: any, idx: number) => (
+            <div key={idx} className="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2">
+              <div className="flex items-center gap-3">
+                <FileText className="h-4 w-4 text-neutral-400"/>
+                <div className="text-sm">{d.name}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge className={d.status === "Parsed" ? "bg-emerald-600" : d.status === "OCR" ? "bg-blue-600" : "bg-neutral-700"}>{d.status}</Badge>
+                <Button size="sm" variant="outline" className="border-neutral-700">Open</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScreenChecklist({ items, setItems }: any) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Checklist & Gaps</CardTitle>
+        <CardDescription>Dynamic asks by property type. Karnataka minimal set for v1.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {items.map((it: any, i: number) => (
+            <label key={it.key} className="flex cursor-pointer items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900 p-3">
+              <div className="flex items-center gap-3">
+                <input type="checkbox" checked={it.done} onChange={(e) => {
+                  const next = [...items];
+                  next[i] = { ...it, done: e.target.checked };
+                  setItems(next);
+                }} className="h-4 w-4 rounded border-neutral-700 bg-neutral-900"/>
+                <span className="text-sm">{it.text}</span>
+              </div>
+              {!it.done && <Badge variant="outline" className="border-amber-500/40 text-amber-400">Missing</Badge>}
+            </label>
+          ))}
+        </div>
+        <div className="mt-3 text-xs text-neutral-500">TODO: state rules engine, evidence requirements, upload prompts.</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScreenTitleChain() {
+  const items = [
+    { year: 2007, type: "Partition Deed", party: "Rao Family", ref: "PD-2007" },
+    { year: 2012, type: "Sale Deed", party: "Rao → Mehta", ref: "SD-2012" },
+    { year: 2019, type: "Sale Deed", party: "Mehta → Acme LLP", ref: "SD-2019" },
+  ];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Title Chain</CardTitle>
+        <CardDescription>Visual timeline of ownership changes with quick links to source.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="relative pl-6">
+          <div className="absolute left-2 top-0 h-full w-px bg-neutral-800" />
+          <div className="space-y-4">
+            {items.map((it, i) => (
+              <div key={i} className="relative">
+                <div className="absolute -left-[9px] top-1 h-4 w-4 rounded-full bg-violet-600" />
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium">{it.year} · {it.type}</div>
+                    <Badge variant="outline" className="border-neutral-700 text-neutral-300">{it.ref}</Badge>
+                  </div>
+                  <div className="text-sm text-neutral-400">Parties: {it.party}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="mt-3 text-xs text-neutral-500">TODO: jump-to-snippet view with highlighted OCR spans; confidence scores.</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScreenFindings() {
+  const risks = [
+    { level: "Red", title: "Name mismatch: Buyer name differs across docs", advice: "Verify PAN spelling; seek affidavit/correction deed.", evidence: "SaleDeed2019 p.2 vs EC p.1" },
+    { level: "Amber", title: "EC gap (2014)", advice: "Pull EC for 2010–2016; confirm no liens.", evidence: "EC_2015_2024.pdf" },
+    { level: "Green", title: "Khata matches latest RTC", advice: "No action.", evidence: "Khata_Extract.jpg, RTC.pdf" },
+  ];
+  const color = (level: string) => level === "Red" ? "bg-rose-600" : level === "Amber" ? "bg-amber-500" : "bg-emerald-600";
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Findings & Evidence</CardTitle>
+        <CardDescription>Risk cards with evidence snippets and next steps.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-3 md:grid-cols-3">
+        {risks.map((r, i) => (
+          <div key={i} className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <span className={`inline-block h-2 w-2 rounded-full ${color(r.level)}`}></span>
+              <div className="text-sm font-medium">{r.level}</div>
+            </div>
+            <div className="text-sm">{r.title}</div>
+            <div className="mt-2 text-xs text-neutral-400">Evidence: {r.evidence}</div>
+            <div className="mt-2 rounded-md border border-neutral-800 bg-neutral-950 p-2 text-xs">Advice: {r.advice}</div>
+            <div className="mt-3 flex gap-2">
+              <Button size="sm" variant="secondary">Confirm</Button>
+              <Button size="sm" variant="outline" className="border-neutral-700">Waive</Button>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScreenReport() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Report Composer</CardTitle>
+        <CardDescription>Editable sections with citations. Export to PDF/DOCX.</CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <Section title="Executive Summary" placeholder="Overall title status, key risks, and recommended actions..." />
+        <Section title="Property & Parties" placeholder="Identifiers, parties, and overview..." />
+        <Section title="Title Chain Overview" placeholder="Summarize chain with references PD-2007, SD-2012, SD-2019..." />
+        <Section title="Encumbrances & Litigation" placeholder="EC review, court checks, liens..." />
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-neutral-500">TODO: clause templates, track edits, citations side-panel.</div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="border-neutral-700"><FileText className="mr-2 h-4 w-4"/>Export DOCX</Button>
+            <Button><FileText className="mr-2 h-4 w-4"/>Export PDF</Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Section({ title, placeholder }: { title: string; placeholder: string }) {
+  return (
+    <div className="rounded-xl border border-neutral-800">
+      <div className="flex items-center justify-between border-b border-neutral-800 p-3">
+        <div className="flex items-center gap-2">
+          <FolderPlus className="h-4 w-4 text-neutral-400"/>
+          <div className="text-sm font-medium">{title}</div>
+        </div>
+        <Badge variant="outline" className="border-neutral-700 text-neutral-300">Editable</Badge>
+      </div>
+      <div className="p-3">
+        <Textarea placeholder={placeholder} className="min-h-[120px]"/>
+        <div className="mt-2 flex items-center gap-2 text-xs text-neutral-500">
+          <ShieldAlert className="h-3.5 w-3.5"/> Include source citations in final.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Labeled({ label, children }: any) {
+  return (
+    <label className="grid gap-1">
+      <span className="text-xs text-neutral-400">{label}</span>
+      {children}
+    </label>
+  );
+}
+```

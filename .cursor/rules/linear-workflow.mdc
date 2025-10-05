@@ -1,0 +1,128 @@
+---
+alwaysApply: true
+description: Linear project management integration and workflow
+---
+
+# Linear Integration & Workflow
+
+## Project Management
+
+**Project**: REDD v1
+**Team**: Tabz
+**Project ID**: `e302c31c-0379-4855-9514-025b6eb8f2ef`
+
+### Workflow States
+
+- **Backlog**: New issues and unplanned work
+- **Todo**: Ready for development (equivalent to "In Review" in detailed workflow)
+- **In Progress**: Currently being worked on
+- **Done**: Completed and tested
+- **Canceled**: No longer needed (equivalent to "Blocked" in detailed workflow)
+
+### Labels
+
+- **Priority**: `p0` (urgent), `p1` (high)
+- **Type**: `frontend`, `backend`, `ml`, `infra`, `design`, `security`, `docs`
+- **Version**: `v1`, `epic`
+
+## Development Workflow
+
+### Starting Work
+
+1. **Claim Issue**: Use Linear MCP to assign issue to yourself
+2. **Move to In Progress**: Update issue status
+3. **Comment Plan**: Add a comment explaining your approach
+
+```typescript
+// Example workflow commands
+// mcp_linear_update_issue({"id": "issue-id", "state": "In Progress"})
+// mcp_linear_create_comment({"issueId": "issue-id", "body": "Plan: Implement component with X, Y, Z"})
+```
+
+### Branch Strategy
+
+```
+feature/[ticket-number]-[short-description]
+fix/[ticket-number]-[short-description]
+chore/[ticket-number]-[short-description]
+```
+
+Examples:
+- `feature/tab-6-app-scaffold`
+- `fix/tab-7-form-validation`
+- `chore/tab-13-mock-data`
+
+### Commit Conventions
+
+```bash
+# Format: type(scope): description
+git commit -m "feat: add case creation form with validation"
+git commit -m "fix: resolve document upload error handling"
+git commit -m "chore: update dependencies and type definitions"
+```
+
+Types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `test`
+
+### Pull Requests
+
+**Template**:
+```markdown
+## What
+- Brief description of changes
+
+## Why
+- User value / acceptance criteria
+
+## How
+- Key changes, assumptions, tradeoffs
+
+## Screenshots / Proof
+- Before/after screenshots or test results
+
+## Checklist
+- [ ] Tests added/updated
+- [ ] Handles error/empty/loading states
+- [ ] A11y quick pass
+- [ ] Linked issue: Fixes TAB-###
+```
+
+**PR Title**: `[TAB-###] Brief description`
+
+### Completing Work
+
+1. **Create PR**: Link to Linear issue in description
+2. **Request Review**: Assign to PM for review
+3. **Update Linear**: Move issue to "Done" when PR merges
+4. **Comment Results**: Add summary of what was implemented
+
+## Key Commands
+
+### Linear Operations
+```typescript
+// Get project issues
+mcp_linear_list_issues({"project": "REDD v1"})
+
+// Update issue status
+mcp_linear_update_issue({
+  "id": "issue-id",
+  "state": "In Progress"
+})
+
+// Create comment
+mcp_linear_create_comment({
+  "issueId": "issue-id",
+  "body": "Implementation complete with PR: [link]"
+})
+```
+
+### Git Operations
+```bash
+# Create feature branch
+git checkout -b feature/tab-6-app-scaffold
+
+# Commit with conventional format
+git commit -m "feat: scaffold Next.js app with layout and navigation"
+
+# Push and create PR
+git push origin feature/tab-6-app-scaffold
+```

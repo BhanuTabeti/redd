@@ -1,0 +1,120 @@
+---
+globs: apps/web/src/**/*.{tsx,ts,jsx,js}
+description: Frontend development patterns and conventions for REDD
+---
+
+# Frontend Development Patterns
+
+## Component Structure
+
+All components should follow this structure:
+
+```tsx
+// components/ExampleComponent.tsx
+import { cn } from "@/lib/utils"
+
+interface ExampleComponentProps {
+  // Define props with proper TypeScript types
+  className?: string
+  children?: React.ReactNode
+}
+
+export function ExampleComponent({
+  className,
+  children,
+  ...props
+}: ExampleComponentProps) {
+  return (
+    <div className={cn("base-classes", className)} {...props}>
+      {children}
+    </div>
+  )
+}
+```
+
+## State Management
+
+- Use React hooks (useState, useEffect, useCallback) for local state
+- Consider Zustand or React Context for global app state
+- Always handle loading, error, and empty states
+
+## Form Handling
+
+```tsx
+// Use react-hook-form for complex forms
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+
+const schema = z.object({
+  // validation schema
+})
+
+export function CaseForm() {
+  const form = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      // defaults
+    }
+  })
+
+  const onSubmit = (data) => {
+    // handle submission
+  }
+
+  return (
+    <form onSubmit={form.handleSubmit(onSubmit)}>
+      {/* form fields */}
+    </form>
+  )
+}
+```
+
+## API Integration
+
+```tsx
+// lib/services/api.ts
+export async function fetchCase(caseId: string) {
+  const response = await fetch(`/api/cases/${caseId}`)
+  if (!response.ok) throw new Error('Failed to fetch case')
+  return response.json()
+}
+
+// In components
+import { useQuery } from "@tanstack/react-query"
+
+export function CaseDetails({ caseId }: { caseId: string }) {
+  const { data: caseData, isLoading, error } = useQuery({
+    queryKey: ['case', caseId],
+    queryFn: () => fetchCase(caseId)
+  })
+
+  if (isLoading) return <div>Loading...</div>
+  if (error) return <div>Error: {error.message}</div>
+  if (!caseData) return <div>No case found</div>
+
+  return <div>{/* render case data */}</div>
+}
+```
+
+## Styling Conventions
+
+- Use Tailwind CSS classes with `cn()` utility for conditional classes
+- Follow BEM methodology for complex component class names
+- Use CSS custom properties for theming
+- Prefer `className` over `styled-components` for consistency
+
+## Accessibility
+
+- Always include proper ARIA labels and roles
+- Ensure keyboard navigation works for all interactive elements
+- Use semantic HTML elements
+- Test with screen readers when possible
+- Include focus management for modals and dialogs
+
+## Performance
+
+- Use `React.memo` for expensive components
+- Implement proper loading states with skeletons
+- Use `next/image` for optimized image loading
+- Implement code splitting for route-based components
