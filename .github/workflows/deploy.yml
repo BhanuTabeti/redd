@@ -19,18 +19,25 @@ jobs:
         with:
           node-version: '18'
 
+      - name: Clean npm cache
+        run: |
+          echo "Cleaning npm cache..."
+          npm cache clean --force
+
       - name: Install dependencies
         run: |
           cd apps/web
           echo "Installing dependencies..."
-          npm install --no-audit --no-fund
-          echo "Dependencies installed"
+          npm install --no-audit --no-fund --verbose
+          echo "Dependencies installed successfully"
+          echo "Verifying node_modules..."
+          ls -la node_modules/.bin/ | head -20
 
       - name: Build static site
         run: |
           cd apps/web
           echo "Building static site..."
-          npm run build
+          npm run build 2>&1 | tee build.log || (echo "Build failed. Last 50 lines:" && tail -50 build.log && exit 1)
           echo "Static build completed"
 
       - name: Deploy to Cloudflare Pages
