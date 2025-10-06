@@ -1,9 +1,183 @@
-# Cloudflare Workers Development Rules for REDD
+# REDD Development Rules - Cloudflare & Next.js
 
 ## Overview
-This file provides Cursor with comprehensive patterns and guidelines for developing Cloudflare Workers applications in the REDD (Real Estate Due Diligence) project. These rules ensure consistent, efficient, and maintainable Cloudflare Workers code.
+This file provides Cursor with comprehensive patterns and guidelines for developing the REDD (Real Estate Due Diligence) application. REDD is built with Next.js (static export) deployed on Cloudflare Pages, with future Cloudflare Workers for backend services.
 
-## 1. Workers Request/Response Patterns
+## Current Stack
+- **Frontend**: Next.js 15.5.4 + React 19 + TypeScript
+- **Styling**: Tailwind CSS v3.4.17 + shadcn/ui components
+- **Deployment**: Cloudflare Pages (Git integration)
+- **Future Backend**: Cloudflare Workers + D1 + R2 + Queues
+
+## 1. Frontend Development Patterns
+
+### Next.js Configuration (Static Export)
+```typescript
+// next.config.ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  // Development optimization
+  turbopack: process.env.NODE_ENV === 'development' ? {} : undefined,
+  
+  // Static export for Cloudflare Pages
+  output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true  // Required for static export
+  },
+  
+  serverExternalPackages: [],
+};
+
+export default nextConfig;
+```
+
+### Tailwind CSS v3 Setup
+```typescript
+// tailwind.config.ts
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  darkMode: ["class"],
+  content: [
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        // ... etc (use HSL format, not oklch)
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+    },
+  },
+  plugins: [],
+};
+```
+
+### PostCSS Configuration
+```javascript
+// postcss.config.mjs
+const config = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+
+export default config;
+```
+
+### Global CSS Setup
+```css
+/* globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 3.9%;
+  /* Use HSL format: hue saturation lightness */
+}
+
+.dark {
+  --background: 0 0% 3.9%;
+  --foreground: 0 0% 98%;
+}
+```
+
+### React Component Patterns
+```typescript
+"use client";  // Use for interactive components
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+export default function MyComponent() {
+  const [state, setState] = useState("");
+  
+  return (
+    <Card>
+      <Button onClick={() => setState("clicked")}>
+        Click me
+      </Button>
+    </Card>
+  );
+}
+```
+
+### shadcn/ui Component Usage
+```typescript
+// Import from @/components/ui
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+
+// Use with Tailwind classes
+<Button variant="default" size="lg" className="w-full">
+  Submit
+</Button>
+```
+
+## 2. Deployment & Build Configuration
+
+### Cloudflare Pages Deployment
+```bash
+# Automatic deployment via Git integration
+# Push to main → Cloudflare builds and deploys automatically
+
+# Build command (configured in Cloudflare):
+cd apps/web && npm install && npm run build
+
+# Build output directory:
+apps/web/out
+
+# Environment variables (set in Cloudflare dashboard):
+NODE_VERSION=20
+```
+
+### Local Development
+```bash
+# Development with hot reload
+npm run dev
+
+# Build for production (static export)
+npm run build
+
+# Output: apps/web/out/ directory
+```
+
+### Important Notes
+- **No Wrangler deployment** for frontend (uses Cloudflare Pages Git integration)
+- **Static export only** - No SSR, no API routes in Next.js
+- **Use Tailwind v3** - v4 has native binary issues in CI environments
+- **All images unoptimized** - Required for static export
+
+## 3. Workers Request/Response Patterns
 
 ### Basic Worker Handler
 ```typescript
@@ -457,28 +631,27 @@ async function generateDailyReport(env: CloudflareEnv): Promise<string> {
 
 ## 8. Development Guidelines
 
-### Development vs Preview
+### Development Commands
 ```bash
 # Fast development with hot reload (Next.js)
 npm run dev
 
-# Production-like testing (Cloudflare Workers)
-npm run preview
+# Build static export for deployment
+npm run build
 
-# Build for deployment
-npm run build-open
+# Build output location
+apps/web/out/
 
-# Deploy to Cloudflare
-npm run deploy
+# Deployment: Automatic via Cloudflare Pages Git integration
+# (Push to main branch → Cloudflare builds and deploys)
 ```
 
-### Wrangler Commands
+### Wrangler Commands (Future Workers)
 ```bash
+# When implementing backend Workers:
+
 # Start local development server
 npx wrangler dev
-
-# Preview production build locally
-npm run preview
 
 # Tail logs in real-time
 npx wrangler tail
@@ -496,23 +669,42 @@ npm run cf-typegen
 ### Environment Setup
 ```bash
 # Install dependencies
-npm install
+cd apps/web && npm install
 
-# Copy environment template
-cp .env.example .env.local
+# Build static site
+npm run build
 
-# Edit .env.local with your values
-# Note: In Workers, use env.VARIABLE_NAME, not process.env
+# Check build output
+ls -la out/
 
-# Generate Cloudflare types
-npm run cf-typegen
+# Note: Frontend uses static export (no environment variables needed for build)
+# Backend Workers will use env.VARIABLE_NAME, not process.env
 ```
 
 ## 9. Troubleshooting
 
 ### Common Issues
 
-**1. process.env errors**
+**1. Tailwind CSS v4 / lightningcss errors**
+```typescript
+// ❌ Problem: Tailwind v4 uses lightningcss (Rust native binary)
+// This causes "Cannot find module '../lightningcss.linux-x64-gnu.node'" in CI
+
+// ✅ Solution: Use Tailwind CSS v3
+// v3 is pure JavaScript, no native binaries, works everywhere
+"devDependencies": {
+  "tailwindcss": "^3.4.17",
+  "postcss": "^8.4.49",
+  "autoprefixer": "^10.4.20"
+}
+
+// Config for v3:
+// - Use @tailwind directives (not @import)
+// - Use HSL color format (not oklch)
+// - Standard postcss.config.mjs with tailwindcss + autoprefixer plugins
+```
+
+**2. process.env errors**
 ```typescript
 // ❌ Wrong - doesn't work in Workers without nodejs_compat
 const apiKey = process.env.OPENAI_API_KEY;
