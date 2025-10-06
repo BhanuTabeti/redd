@@ -8,8 +8,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-22.04
-
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,39 +16,25 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
 
-      - name: Clean npm cache
-        run: |
-          echo "Cleaning npm cache..."
-          npm cache clean --force
-
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
           cd apps/web
-          echo "Installing dependencies..."
-          npm install --no-audit --no-fund --verbose
-          echo "Dependencies installed successfully"
-          echo "Verifying node_modules..."
-          ls -la node_modules/.bin/ | head -20
+          npm install
 
-      - name: Build static site
+      - name: Build
         run: |
           cd apps/web
-          echo "Building static site..."
-          npm run build 2>&1 | tee build.log || (echo "Build failed. Last 50 lines:" && tail -50 build.log && exit 1)
-          echo "Static build completed"
+          npm run build
 
-      - name: Deploy to Cloudflare Pages
-        run: |
-          cd apps/web
-          echo "Deploying static build to Cloudflare Pages..."
-          echo "Account ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
-          ls -la out/
-          npx wrangler pages deploy out --compatibility-date=2025-04-01
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      - name: Output deployment URL
-        run: echo "Deployment completed. Check Cloudflare Pages dashboard for live URL."
+      - name: Deploy
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDEFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: redd-web
+          directory: apps/web/out
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
