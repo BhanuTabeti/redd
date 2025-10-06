@@ -17,30 +17,25 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '18'
           cache: 'npm'
           cache-dependency-path: 'apps/web/package-lock.json'
 
       - name: Install dependencies
         run: |
           cd apps/web
-          echo "Installing dependencies..."
-          npm install --no-audit --no-fund
-          echo "Initial dependencies installed"
+          echo "Installing dependencies with Node.js $(node --version)..."
+          npm install --no-audit --no-fund --verbose
+          echo "Dependencies installed successfully"
 
-      - name: Build for Cloudflare (with SWC patching)
+      - name: Build for Cloudflare
         run: |
           cd apps/web
-          echo "Building for Cloudflare (this will patch SWC dependencies)..."
+          echo "Building for Cloudflare with Node.js $(node --version)..."
+          echo "Current directory: $(pwd)"
+          echo "Available scripts: $(npm run --silent)"
           npm run build-open
-          echo "Build completed, checking if SWC dependencies need installation..."
-
-      - name: Install SWC dependencies if needed
-        run: |
-          cd apps/web
-          echo "Checking for SWC dependency updates..."
-          npm install --no-audit --no-fund
-          echo "SWC dependencies updated if needed"
+          echo "Build completed successfully"
 
       - name: Verify installation
         run: |
