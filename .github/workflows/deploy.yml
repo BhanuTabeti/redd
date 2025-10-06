@@ -22,13 +22,16 @@ jobs:
           cache-dependency-path: 'apps/web/package-lock.json'
 
       - name: Install dependencies
-        run: cd apps/web && npm ci
+        run: cd apps/web && npm ci --no-audit --no-fund
 
       - name: Build for Cloudflare
         run: cd apps/web && npm run build-open
 
       - name: Deploy to Cloudflare Pages
-        run: cd apps/web && npx wrangler pages deploy .opennext/dist --compatibility-date=2025-04-01 --compatibility-flags=nodejs_compat
+        run: |
+          cd apps/web
+          echo "Deploying to Cloudflare Pages..."
+          npx wrangler pages deploy .opennext/dist --compatibility-date=2025-04-01 --compatibility-flags=nodejs_compat
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
