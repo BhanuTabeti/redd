@@ -15,11 +15,18 @@ binding = "ASSETS"
 
 [vars]
 NODE_ENV = "production"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "your-clerk-publishable-key"
+CLERK_SECRET_KEY = "your-clerk-secret-key"
 
 # Environment-specific configurations
 [env.preview]
 name = "redd-web-preview"
 route = "redd-web-preview.pages.dev/*"
+vars = {
+  NODE_ENV = "preview",
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "your-clerk-publishable-key-preview",
+  CLERK_SECRET_KEY = "your-clerk-secret-key-preview"
+}
 
 [env.production]
 name = "redd-web-production"

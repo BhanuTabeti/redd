@@ -111,6 +111,7 @@ export default function REDD_Demo() {
       { id: "docs", label: "Document Inbox", screen: "Docs", status: "pending", description: "Upload and process documents" },
       { id: "processing", label: "Processing", screen: "Processing", status: "pending", description: "AI document analysis" },
       { id: "workspace", label: "DD Workspace", screen: "DDWorkspace", status: "pending", description: "Review findings and evidence" },
+      { id: "findings", label: "Findings", screen: "Findings", status: "pending", description: "Review risk findings and evidence" },
       { id: "drafting", label: "Drafting Assistant", screen: "DraftingAssistant", status: "pending", description: "Draft agreements with AI" },
       { id: "report", label: "Report", screen: "Report", status: "pending", description: "Generate final report" }
     ];
@@ -127,13 +128,15 @@ export default function REDD_Demo() {
       case "Review":
         baseSteps[0].status = "completed";
         baseSteps[1].status = "completed";
-        baseSteps[2].status = "current";
+        baseSteps[2].status = "completed";
+        baseSteps[3].status = "current";
         break;
       case "Drafting":
         baseSteps[0].status = "completed";
         baseSteps[1].status = "completed";
         baseSteps[2].status = "completed";
-        baseSteps[3].status = "current";
+        baseSteps[3].status = "completed";
+        baseSteps[4].status = "current";
         break;
       case "Finalized":
         baseSteps.forEach(step => step.status = "completed");
