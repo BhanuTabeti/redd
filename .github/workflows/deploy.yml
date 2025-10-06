@@ -19,44 +19,28 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Clean npm cache
-        run: |
-          echo "Cleaning npm cache..."
-          npm cache clean --force
-
       - name: Install dependencies
         run: |
           cd apps/web
-          echo "Installing dependencies without cache..."
-          npm install --no-audit --no-fund --verbose
+          echo "Installing dependencies..."
+          npm install --no-audit --no-fund
           echo "Dependencies installed"
 
-      - name: Build Next.js app
+      - name: Build static site
         run: |
           cd apps/web
-          echo "Building Next.js app..."
+          echo "Building static site..."
           npm run build
-          echo "Next.js build completed"
+          echo "Static build completed"
 
-      - name: Build for Cloudflare with OpenNext
-        run: |
-          cd apps/web
-          echo "Building for Cloudflare with OpenNext..."
-          npx opennextjs-cloudflare@latest build
-          echo "OpenNext build completed"
+      - name: Deploy static build to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: redd-web
+          directory: apps/web/out
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify build output
-        run: |
-          cd apps/web
-          echo "Verifying build output..."
-          ls -la .opennext/
-          echo "Build output verification complete"
-
-      - name: Deploy to Cloudflare Pages
-        run: |
-          cd apps/web
-          echo "Deploying to Cloudflare Pages..."
-          npx wrangler pages deploy .opennext/dist --compatibility-date=2025-04-01 --compatibility-flags=nodejs_compat
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Output deployment URL
+        run: echo "Deployment completed. Check Cloudflare Pages dashboard for live URL."

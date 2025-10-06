@@ -4,9 +4,12 @@ const nextConfig: NextConfig = {
   // Disable Turbopack for production builds due to Cloudflare Workers compatibility issues
   turbopack: process.env.NODE_ENV === 'development' ? {} : undefined,
 
-  // Optimize for Cloudflare Workers
-  output: 'standalone',
+  // Static export for Cloudflare Pages
+  output: 'export',
   trailingSlash: true,
+  images: {
+    unoptimized: true
+  },
 
   // Server external packages for better compatibility
   serverExternalPackages: [],
