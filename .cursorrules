@@ -1,0 +1,754 @@
+# Cloudflare Workers Development Rules for REDD
+
+## Overview
+This file provides Cursor with comprehensive patterns and guidelines for developing Cloudflare Workers applications in the REDD (Real Estate Due Diligence) project. These rules ensure consistent, efficient, and maintainable Cloudflare Workers code.
+
+## 1. Workers Request/Response Patterns
+
+### Basic Worker Handler
+```typescript
+export default {
+  async fetch(request: Request, env: CloudflareEnv, ctx: ExecutionContext): Promise<Response> {
+    try {
+      // Handle different HTTP methods
+      switch (request.method) {
+        case 'GET':
+          return await handleGET(request, env);
+        case 'POST':
+          return await handlePOST(request, env);
+        case 'PUT':
+          return await handlePUT(request, env);
+        case 'DELETE':
+          return await handleDELETE(request, env);
+        default:
+          return new Response('Method not allowed', { status: 405 });
+      }
+    } catch (error) {
+      console.error('Worker error:', error);
+      return new Response('Internal server error', { status: 500 });
+    }
+  }
+} satisfies ExportedHandler<CloudflareEnv>;
+```
+
+### Environment Bindings Access
+```typescript
+// Access environment variables and bindings
+const corsHeaders = {
+  'Access-Control-Allow-Origin': env.CORS_ORIGIN || '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+function getEnvVar(env: CloudflareEnv, key: string, defaultValue?: string): string {
+  return env[key] || defaultValue || '';
+}
+```
+
+### CORS Handler
+```typescript
+async function handleCORS(request: Request): Promise<Response> {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
+    });
+  }
+  return new Response('Not Found', { status: 404 });
+}
+```
+
+## 2. D1 Database Patterns
+
+### Database Connection
+```typescript
+// D1 Database binding
+interface CloudflareEnv {
+  DB: D1Database;
+}
+```
+
+### Basic Queries
+```typescript
+// SELECT query
+async function getMatters(env: CloudflareEnv): Promise<any[]> {
+  const { results } = await env.DB.prepare(
+    'SELECT * FROM matters WHERE status = ? ORDER BY created_at DESC'
+  ).bind('active').all();
+
+  return results;
+}
+
+// INSERT query
+async function createMatter(env: CloudflareEnv, matter: any): Promise<D1Result> {
+  return await env.DB.prepare(
+    'INSERT INTO matters (id, name, status, created_at) VALUES (?, ?, ?, ?)'
+  ).bind(matter.id, matter.name, matter.status, new Date().toISOString()).run();
+}
+
+// UPDATE query
+async function updateMatterStatus(env: CloudflareEnv, id: string, status: string): Promise<D1Result> {
+  return await env.DB.prepare(
+    'UPDATE matters SET status = ?, updated_at = ? WHERE id = ?'
+  ).bind(status, new Date().toISOString(), id).run();
+}
+
+// DELETE query
+async function deleteMatter(env: CloudflareEnv, id: string): Promise<D1Result> {
+  return await env.DB.prepare('DELETE FROM matters WHERE id = ?').bind(id).run();
+}
+```
+
+### Transactions
+```typescript
+async function transferMatterWithTransaction(env: CloudflareEnv, matterId: string, newOwnerId: string): Promise<void> {
+  await env.DB.batch([
+    env.DB.prepare('UPDATE matters SET owner_id = ? WHERE id = ?').bind(newOwnerId, matterId),
+    env.DB.prepare('INSERT INTO audit_log (matter_id, action, timestamp) VALUES (?, ?, ?)')
+      .bind(matterId, 'TRANSFERRED', new Date().toISOString())
+  ]);
+}
+```
+
+### Prepared Statements with Parameters
+```typescript
+async function getMattersByStatus(env: CloudflareEnv, status: string, limit: number = 50): Promise<any[]> {
+  const { results } = await env.DB.prepare(
+    'SELECT * FROM matters WHERE status = ? ORDER BY created_at DESC LIMIT ?'
+  ).bind(status, limit).all();
+
+  return results;
+}
+```
+
+## 3. R2 Storage Patterns
+
+### File Upload
+```typescript
+async function uploadFile(env: CloudflareEnv, file: File, key: string): Promise<void> {
+  await env.BUCKET.put(key, file.stream(), {
+    httpMetadata: {
+      contentType: file.type,
+      cacheControl: 'public, max-age=31536000',
+    },
+  });
+}
+
+async function uploadFromRequest(env: CloudflareEnv, request: Request, key: string): Promise<Response> {
+  const formData = await request.formData();
+  const file = formData.get('file') as File;
+
+  if (!file) {
+    return new Response('No file provided', { status: 400 });
+  }
+
+  await uploadFile(env, file, key);
+  return new Response('File uploaded successfully', { status: 200 });
+}
+```
+
+### File Download
+```typescript
+async function downloadFile(env: CloudflareEnv, key: string): Promise<ReadableStream | null> {
+  const object = await env.BUCKET.get(key);
+  return object?.body || null;
+}
+
+async function serveFile(env: CloudflareEnv, key: string): Promise<Response> {
+  const object = await env.BUCKET.get(key);
+
+  if (!object) {
+    return new Response('File not found', { status: 404 });
+  }
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set('etag', object.httpEtag);
+
+  return new Response(object.body, { headers });
+}
+```
+
+### File Operations
+```typescript
+// List files
+async function listFiles(env: CloudflareEnv, prefix?: string): Promise<string[]> {
+  const options: R2ListOptions = {};
+  if (prefix) options.prefix = prefix;
+
+  const objects = await env.BUCKET.list(options);
+  return objects.objects.map(obj => obj.key);
+}
+
+// Delete file
+async function deleteFile(env: CloudflareEnv, key: string): Promise<void> {
+  await env.BUCKET.delete(key);
+}
+
+// Check if file exists
+async function fileExists(env: CloudflareEnv, key: string): Promise<boolean> {
+  const object = await env.BUCKET.head(key);
+  return !!object;
+}
+
+// Get file metadata
+async function getFileMetadata(env: CloudflareEnv, key: string): Promise<R2Object | null> {
+  return await env.BUCKET.head(key);
+}
+```
+
+## 4. Queue Patterns
+
+### Send Message to Queue
+```typescript
+async function queueOCRProcessing(env: CloudflareEnv, documentId: string, fileKey: string): Promise<void> {
+  await env.OCR_QUEUE.send({
+    documentId,
+    fileKey,
+    timestamp: new Date().toISOString(),
+    priority: 'normal'
+  });
+}
+
+async function queueBatchProcessing(env: CloudflareEnv, batchId: string, items: any[]): Promise<void> {
+  await env.BATCH_QUEUE.send({
+    batchId,
+    items,
+    totalItems: items.length,
+    timestamp: new Date().toISOString()
+  });
+}
+```
+
+### Queue Consumer
+```typescript
+export default {
+  async queue(batch: MessageBatch<any>, env: CloudflareEnv): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        await processQueueMessage(message, env);
+        message.ack();
+      } catch (error) {
+        console.error('Queue processing error:', error);
+        message.retry();
+      }
+    }
+  }
+} satisfies QueueConsumer<CloudflareEnv>;
+
+async function processQueueMessage(message: Message, env: CloudflareEnv): Promise<void> {
+  const { documentId, fileKey } = message.body;
+
+  // Process the OCR job
+  const result = await processOCR(env, documentId, fileKey);
+
+  // Update database with results
+  await updateDocumentStatus(env, documentId, 'processed', result);
+}
+```
+
+## 5. Cron Patterns
+
+### Scheduled Handler
+```typescript
+export default {
+  async scheduled(event: ScheduledEvent, env: CloudflareEnv, ctx: ExecutionContext): Promise<void> {
+    console.log('Cron triggered:', event.cron);
+
+    switch (event.cron) {
+      case '0 0 * * *': // Daily at midnight
+        await generateDailyReport(env);
+        break;
+      case '0 */6 * * *': // Every 6 hours
+        await cleanupOldFiles(env);
+        break;
+      case '0 9 * * 1': // Weekly on Monday at 9 AM
+        await sendWeeklyDigest(env);
+        break;
+    }
+  }
+} satisfies ScheduledHandler<CloudflareEnv>;
+
+async function generateDailyReport(env: CloudflareEnv): Promise<void> {
+  const stats = await getDailyStats(env);
+  const report = await generateReport(stats);
+
+  // Send email or save report
+  await saveReport(env, 'daily', report);
+}
+
+async function cleanupOldFiles(env: CloudflareEnv): Promise<void> {
+  const oldFiles = await listOldTempFiles(env);
+  await Promise.all(oldFiles.map(key => deleteFile(env, key)));
+}
+```
+
+## 6. TypeScript Environment Interface
+
+```typescript
+// cloudflare-env.d.ts
+interface CloudflareEnv {
+  // Environment Variables
+  NODE_ENV: string;
+  DATABASE_URL?: string;
+  OPENAI_API_KEY?: string;
+
+  // Bindings
+  ASSETS: Fetcher; // Static assets
+
+  // Database
+  DB: D1Database;
+
+  // Storage
+  BUCKET: R2Bucket;
+  TEMP_BUCKET?: R2Bucket;
+
+  // Queues
+  OCR_QUEUE: Queue;
+  EMAIL_QUEUE?: Queue;
+  BATCH_QUEUE: Queue;
+
+  // KV Storage
+  CACHE?: KVNamespace;
+  SESSIONS?: KVNamespace;
+
+  // Durable Objects
+  RATE_LIMITER?: DurableObjectNamespace;
+  WEBSOCKET_HUB?: DurableObjectNamespace;
+
+  // External Services
+  OPENAI?: Ai;
+
+  // Secrets (not logged)
+  SECRET_KEY?: string;
+}
+
+// Type helpers
+type CloudflareEnvKey = keyof CloudflareEnv;
+type CloudflareEnvValue<K extends CloudflareEnvKey> = CloudflareEnv[K];
+```
+
+## 7. Common Snippets
+
+### Authentication Middleware
+```typescript
+async function authenticateRequest(request: Request, env: CloudflareEnv): Promise<{ user?: any; response?: Response }> {
+  const authHeader = request.headers.get('Authorization');
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { response: new Response('Unauthorized', { status: 401 }) };
+  }
+
+  const token = authHeader.slice(7);
+  const user = await verifyToken(env, token);
+
+  if (!user) {
+    return { response: new Response('Invalid token', { status: 401 }) };
+  }
+
+  return { user };
+}
+
+async function verifyToken(env: CloudflareEnv, token: string): Promise<any | null> {
+  // Verify JWT token
+  try {
+    return await verifyJWT(token, env.SECRET_KEY);
+  } catch {
+    return null;
+  }
+}
+```
+
+### File Upload Handler
+```typescript
+async function handleFileUpload(request: Request, env: CloudflareEnv): Promise<Response> {
+  if (request.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  const formData = await request.formData();
+  const file = formData.get('file') as File;
+  const matterId = formData.get('matterId') as string;
+
+  if (!file || !matterId) {
+    return new Response('Missing file or matterId', { status: 400 });
+  }
+
+  // Validate file type and size
+  if (file.size > 10 * 1024 * 1024) { // 10MB limit
+    return new Response('File too large', { status: 413 });
+  }
+
+  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+  if (!allowedTypes.includes(file.type)) {
+    return new Response('Invalid file type', { status: 400 });
+  }
+
+  // Generate unique key
+  const key = `matters/${matterId}/documents/${Date.now()}-${file.name}`;
+
+  // Upload to R2
+  await uploadFile(env, file, key);
+
+  // Queue OCR processing
+  await queueOCRProcessing(env, matterId, key);
+
+  return new Response(JSON.stringify({ key, status: 'uploaded' }), {
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+```
+
+### OCR Queue Handler
+```typescript
+async function processOCR(env: CloudflareEnv, documentId: string, fileKey: string): Promise<any> {
+  // Download file from R2
+  const fileStream = await downloadFile(env, fileKey);
+  if (!fileStream) {
+    throw new Error('File not found');
+  }
+
+  // Convert to buffer for OCR processing
+  const fileBuffer = await streamToBuffer(fileStream);
+
+  // Call OCR service
+  const ocrResult = await callOCRService(env, fileBuffer);
+
+  // Extract text and metadata
+  const extractedText = ocrResult.text;
+  const confidence = ocrResult.confidence;
+
+  return {
+    text: extractedText,
+    confidence,
+    processedAt: new Date().toISOString()
+  };
+}
+```
+
+### Cron Report Generator
+```typescript
+async function generateDailyReport(env: CloudflareEnv): Promise<string> {
+  const stats = await env.DB.prepare(`
+    SELECT
+      COUNT(*) as total_matters,
+      COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_matters,
+      AVG(progress) as avg_progress
+    FROM matters
+    WHERE DATE(created_at) = DATE('now')
+  `).first();
+
+  const report = `
+    Daily Report - ${new Date().toISOString().split('T')[0]}
+
+    Total Matters: ${stats.total_matters}
+    Completed: ${stats.completed_matters}
+    Average Progress: ${Math.round(stats.avg_progress)}%
+    Success Rate: ${Math.round((stats.completed_matters / stats.total_matters) * 100)}%
+  `;
+
+  return report;
+}
+```
+
+## 8. Development Guidelines
+
+### Development vs Preview
+```bash
+# Fast development with hot reload (Next.js)
+npm run dev
+
+# Production-like testing (Cloudflare Workers)
+npm run preview
+
+# Build for deployment
+npm run build-open
+
+# Deploy to Cloudflare
+npm run deploy
+```
+
+### Wrangler Commands
+```bash
+# Start local development server
+npx wrangler dev
+
+# Preview production build locally
+npm run preview
+
+# Tail logs in real-time
+npx wrangler tail
+
+# Check deployment status
+npx wrangler pages deployment list
+
+# View environment variables
+npx wrangler secret list
+
+# Generate types from wrangler.toml
+npm run cf-typegen
+```
+
+### Environment Setup
+```bash
+# Install dependencies
+npm install
+
+# Copy environment template
+cp .env.example .env.local
+
+# Edit .env.local with your values
+# Note: In Workers, use env.VARIABLE_NAME, not process.env
+
+# Generate Cloudflare types
+npm run cf-typegen
+```
+
+## 9. Troubleshooting
+
+### Common Issues
+
+**1. process.env errors**
+```typescript
+// ❌ Wrong - doesn't work in Workers without nodejs_compat
+const apiKey = process.env.OPENAI_API_KEY;
+
+// ✅ Correct - use env parameter
+async function handler(request: Request, env: CloudflareEnv) {
+  const apiKey = env.OPENAI_API_KEY;
+}
+```
+
+**2. 3MB bundle size limit**
+- Monitor bundle size: `npx wrangler deploy --dry-run`
+- Split large files into chunks
+- Use dynamic imports for optional features
+- Remove unused dependencies
+
+**3. Timeout errors**
+```typescript
+// Set timeout for long-running operations
+ctx.waitUntil(longRunningTask());
+
+// Or use alarm for background tasks
+async function scheduleBackgroundTask(env: CloudflareEnv, delay: number) {
+  await env.RATE_LIMITER.idFromName('background-tasks').fetch('https://background-tasks/alarm', {
+    method: 'POST',
+    body: JSON.stringify({ delay })
+  });
+}
+```
+
+**4. CORS errors**
+```typescript
+// Handle preflight OPTIONS requests
+async function handleRequest(request: Request, env: CloudflareEnv): Promise<Response> {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': env.CORS_ORIGIN || '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
+    });
+  }
+
+  // Add CORS headers to all responses
+  const response = await generateResponse(request, env);
+  response.headers.set('Access-Control-Allow-Origin', env.CORS_ORIGIN || '*');
+  return response;
+}
+```
+
+**5. Memory issues with large files**
+```typescript
+// Stream large files instead of loading into memory
+async function processLargeFile(env: CloudflareEnv, fileKey: string): Promise<void> {
+  const object = await env.BUCKET.get(fileKey, {
+    range: { offset: 0, length: 1024 * 1024 } // Process in 1MB chunks
+  });
+
+  if (object) {
+    const reader = object.body.getReader();
+    let chunk;
+    while (!(chunk = await reader.read()).done) {
+      await processChunk(chunk.value);
+    }
+  }
+}
+```
+
+**6. Database connection issues**
+```typescript
+// Check database connectivity
+async function testDatabase(env: CloudflareEnv): Promise<boolean> {
+  try {
+    await env.DB.prepare('SELECT 1').first();
+    return true;
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    return false;
+  }
+}
+```
+
+## 10. Performance Optimization
+
+### Bundle Optimization
+```typescript
+// Use dynamic imports for optional features
+const optionalModule = await import('./optional-feature');
+
+// Tree shaking for unused code
+export { usedFunction } from './utils';
+
+// Minimize runtime dependencies
+const minimalDeps = ['core-only'];
+```
+
+### Caching Strategies
+```typescript
+// Cache API responses
+async function getCachedData(env: CloudflareEnv, key: string): Promise<any> {
+  const cached = await env.CACHE?.get(key);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const data = await fetchFreshData();
+  await env.CACHE?.put(key, JSON.stringify(data), {
+    expirationTtl: 3600 // 1 hour
+  });
+
+  return data;
+}
+```
+
+### Rate Limiting
+```typescript
+// Implement rate limiting with Durable Objects
+async function checkRateLimit(env: CloudflareEnv, userId: string): Promise<boolean> {
+  const id = env.RATE_LIMITER.idFromName(`user-${userId}`);
+  const stub = id.getStub();
+
+  const response = await stub.fetch('https://rate-limiter/check', {
+    method: 'POST',
+    body: JSON.stringify({ userId, timestamp: Date.now() })
+  });
+
+  return response.ok;
+}
+```
+
+## 11. Security Best Practices
+
+### Input Validation
+```typescript
+function validateInput(input: any): boolean {
+  // Validate required fields
+  if (!input.id || typeof input.id !== 'string') return false;
+
+  // Validate data types
+  if (input.amount && typeof input.amount !== 'number') return false;
+
+  // Sanitize strings
+  input.name = input.name?.trim().substring(0, 100);
+
+  return true;
+}
+```
+
+### SQL Injection Prevention
+```typescript
+// ❌ Vulnerable
+const query = `SELECT * FROM users WHERE id = '${userId}'`;
+
+// ✅ Safe - use prepared statements
+const { results } = await env.DB.prepare(
+  'SELECT * FROM users WHERE id = ?'
+).bind(userId).all();
+```
+
+### Error Handling
+```typescript
+// Don't expose internal errors
+async function safeHandler(request: Request, env: CloudflareEnv): Promise<Response> {
+  try {
+    return await processRequest(request, env);
+  } catch (error) {
+    console.error('Internal error:', error);
+
+    // Log error details for debugging
+    await logError(env, error, request);
+
+    // Return generic error to client
+    return new Response('Internal server error', {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+```
+
+## 12. Testing Patterns
+
+### Unit Tests
+```typescript
+// Test database operations
+describe('MatterService', () => {
+  it('should create matter successfully', async () => {
+    const mockEnv = createMockEnv();
+    const matter = { id: 'test-id', name: 'Test Matter' };
+
+    const result = await createMatter(mockEnv, matter);
+    expect(result.success).toBe(true);
+  });
+});
+
+// Test file operations
+describe('FileService', () => {
+  it('should upload file to R2', async () => {
+    const mockEnv = createMockEnv();
+    const file = new File(['test'], 'test.txt');
+
+    await uploadFile(mockEnv, file, 'test-key');
+    expect(mockEnv.BUCKET.put).toHaveBeenCalledWith('test-key', expect.anything());
+  });
+});
+```
+
+### Integration Tests
+```typescript
+// Test full request flow
+describe('API Integration', () => {
+  it('should handle complete matter creation flow', async () => {
+    const request = new Request('http://localhost/api/matters', {
+      method: 'POST',
+      body: JSON.stringify(testMatter),
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const response = await worker.fetch(request, env, ctx);
+    expect(response.status).toBe(201);
+
+    const created = await response.json();
+    expect(created.id).toBeDefined();
+  });
+});
+```
+
+## Summary
+
+These patterns provide a comprehensive foundation for developing Cloudflare Workers applications in REDD. Always prioritize:
+
+1. **Performance** - Monitor bundle size, use caching, optimize database queries
+2. **Security** - Validate inputs, use prepared statements, handle errors safely
+3. **Reliability** - Implement proper error handling, use transactions for data consistency
+4. **Maintainability** - Follow consistent patterns, add proper TypeScript types, document complex logic
+
+For questions or updates to these patterns, refer to the Cloudflare Workers documentation and the REDD Tech Notes in Notion.

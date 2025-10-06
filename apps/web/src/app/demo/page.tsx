@@ -1661,7 +1661,7 @@ function Stepper({ steps, activeIndex, onSelect }: { steps: { id: string; label:
 }
 
 // Legacy components for backward compatibility (simplified)
-function Labeled({ label, children }: any) {
+function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="grid gap-1">
       <span className="text-xs text-slate-400 font-medium">{label}</span>

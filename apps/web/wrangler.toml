@@ -1,0 +1,54 @@
+name = "redd-web"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+main = ".open-next/worker.js"
+
+[build]
+command = "npm run build-open"
+cwd = "."
+watch_dir = "src"
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[vars]
+NODE_ENV = "production"
+
+# Environment-specific configurations
+[env.preview]
+name = "redd-web-preview"
+route = "redd-web-preview.pages.dev/*"
+
+[env.production]
+name = "redd-web-production"
+route = "redd-web-production.pages.dev/*"
+vars = { NODE_ENV = "production" }
+
+# D1 Database (for future use)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "redd-db"
+# database_id = "your-database-id"
+
+# R2 Storage (for future use)
+# [[r2_buckets]]
+# binding = "MY_BUCKET"
+# bucket_name = "redd-bucket"
+
+# KV Storage (for future use)
+# [[kv_namespaces]]
+# binding = "MY_KV"
+# id = "your-kv-id"
+# preview_id = "your-preview-kv-id"
+
+# Queue (for future use)
+# [[queues.producers]]
+# binding = "OCR_QUEUE"
+# queue = "ocr-processing"
+
+# [[queues.consumers]]
+# queue = "ocr-processing"
+# max_batch_size = 10
+# max_retries = 3
