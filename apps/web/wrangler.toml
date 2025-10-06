@@ -1,8 +1,21 @@
-name = "redd-web"
-compatibility_date = "2025-04-01"
-compatibility_flags = ["nodejs_compat"]
-
+$schema = "node_modules/wrangler/config-schema.json"
 main = ".open-next/worker.js"
+name = "redd-web"
+compatibility_date = "2024-12-30"
+
+[[compatibility_flags]]
+flag = "nodejs_compat"
+
+[[compatibility_flags]]
+flag = "global_fetch_strictly_public"
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "redd-web"
 
 [build]
 command = "npm run build-open"
@@ -19,15 +32,14 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "your-clerk-publishable-key"
 CLERK_SECRET_KEY = "your-clerk-secret-key"
 
 # Environment-specific configurations
-# Note: Cloudflare Pages will override these routes with actual deployment URLs
 [env.preview]
 name = "redd-web-preview"
-# route will be set by Cloudflare Pages based on branch name
+route = "redd-web-preview.pages.dev/*"
 vars = { NODE_ENV = "preview", NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "your-clerk-publishable-key-preview", CLERK_SECRET_KEY = "your-clerk-secret-key-preview" }
 
 [env.production]
 name = "redd-web-production"
-# route will be set by Cloudflare Pages for main branch
+route = "redd-web-production.pages.dev/*"
 vars = { NODE_ENV = "production" }
 
 # D1 Database (for future use)
