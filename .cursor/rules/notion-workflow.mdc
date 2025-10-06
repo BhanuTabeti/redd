@@ -1,0 +1,109 @@
+---
+alwaysApply: true
+description: Notion integration workflow and PM protocol for REDD development
+---
+
+# Notion Integration & PM Workflow Protocol
+
+**Process Update**: Claude is PM and owns the Notion workspace as the single source of truth. Cursor continues as dev lead.
+
+## Notion MCP Integration
+
+If Notion MCP is available → use it directly. If not → post the "NOTION_SYNC" block in Linear and tag @Claude PM; Claude will mirror to Notion.
+
+## Notion Structure
+
+- **/REDD Home** (links)
+- **/PRD** (compact)
+- **/Project State** (JSON) ← Claude maintains
+- **/Decision Log** (db: Date, Topic, Decision, Owner, Link)
+- **/Tech Notes** (one page per ticket) ← you create/update
+- **/Changelog** (rolling list) ← you append per PR
+- **/Standups** (daily) ← Claude creates
+
+## Protocol Per Ticket
+
+### 1) On Start (In Progress)
+- Create/Update **/Tech Notes/<ISSUE_ID> – <title>** with:
+  - Context & approach (bullets)
+  - [ASSUMPTION]s
+  - UI states covered (empty/loading/error)
+  - Analytics/events emitted (if any)
+  - Screenshots or GIFs placeholder
+  - Links: Linear issue, branch name
+
+### 2) On PR Open (In Review)
+- Add to **/Changelog**:
+  - Date, Issue ID/Title, PR link, brief before/after, risk notes
+- Comment the same in Linear.
+- Add NOTION links back into the Linear issue description.
+
+### 3) On Done
+- Update "Tech Notes" with final screenshots + acceptance checklist ticked.
+- Add a Decision Log entry **only if** we made a material decision:
+  - Topic, Decision (1–3 lines), Owner = Cursor Dev, Link = PR or Tech Note
+
+## Acceptance Criteria for UI Tickets
+
+- [ ] Tech Note page exists and is linked in Linear
+- [ ] Screenshots/GIF in Tech Note
+- [ ] E/E/L states demonstrated
+- [ ] Changelog entry created
+- [ ] If a decision was made, Decision Log entry exists
+
+## Notion MCP Commands (if enabled)
+
+### Create Tech Note Page
+```typescript
+// Create page: /Tech Notes/<ISSUE_ID> – <title>
+// Use Notion MCP to create page with content blocks as above
+```
+
+### Append to Changelog
+```typescript
+// Append a list item to /Changelog with {date, issue, title, PR}
+```
+
+### Create Decision Log Entry
+```typescript
+// Create row in /Decision Log when needed
+```
+
+## Fallback When MCP Not Available
+
+In Linear comment include a "NOTION_SYNC" block:
+
+```
+NOTION_SYNC
+Tech Note:
+- Title: <ISSUE_ID> – <title>
+- Context/Approach: <bullets>
+- Assumptions: <list>
+- UI States Covered: <list>
+- Events: <list>
+- Links: PR <url>, Branch <name>
+
+Changelog:
+- Date: <YYYY-MM-DD>
+- Issue: <ISSUE_ID> – <title>
+- PR: <url>
+- Summary: <1–2 lines>
+
+Decision Log (optional):
+- Topic: <short>
+- Decision: <1–2 lines>
+- Owner: Cursor Dev
+- Link: <PR or Tech Note>
+END_NOTION_SYNC
+```
+
+## Order of Work Unchanged
+
+M0 UI demo → routes: `/case/new` → `/case/:id/docs` → … → deploy preview. Keep using Linear states + labels and tag @Claude PM on review.
+
+## Working Agreement Updates
+
+- **PM**: Claude owns scope/priorities and Notion workspace
+- **Dev Lead**: Cursor owns implementation, PRs, tests, automations
+- **Documentation**: Notion is single source of truth
+- **Sync**: Use MCP when available, otherwise use NOTION_SYNC blocks in Linear
