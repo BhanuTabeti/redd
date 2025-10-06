@@ -19,14 +19,15 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "your-clerk-publishable-key"
 CLERK_SECRET_KEY = "your-clerk-secret-key"
 
 # Environment-specific configurations
+# Note: Cloudflare Pages will override these routes with actual deployment URLs
 [env.preview]
 name = "redd-web-preview"
-route = "redd-web-preview.pages.dev/*"
+# route will be set by Cloudflare Pages based on branch name
 vars = { NODE_ENV = "preview", NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "your-clerk-publishable-key-preview", CLERK_SECRET_KEY = "your-clerk-secret-key-preview" }
 
 [env.production]
 name = "redd-web-production"
-route = "redd-web-production.pages.dev/*"
+# route will be set by Cloudflare Pages for main branch
 vars = { NODE_ENV = "production" }
 
 # D1 Database (for future use)
