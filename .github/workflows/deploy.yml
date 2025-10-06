@@ -28,7 +28,7 @@ jobs:
       - name: Build
         run: |
           cd apps/web
-          npm run build
+          NEXT_DISABLE_LIGHTNINGCSS=1 npm run build
 
       - name: Deploy
         uses: cloudflare/pages-action@v1
