@@ -25,6 +25,177 @@ description: Complete Linear project management integration and workflow pattern
 - **Type**: `frontend`, `backend`, `ml`, `infra`, `design`, `security`, `docs`
 - **Version**: `v1`, `epic`
 
+## Handling Task Descriptions
+
+### Writing Effective Issue Titles
+
+**Guidelines:**
+- **Clear and specific**: Use action words and be descriptive
+- **Include context**: Mention the feature/area when relevant
+- **Consistent format**: Start with verb (Add, Fix, Update, Implement, etc.)
+
+**Good Examples:**
+- ✅ "Implement user authentication with JWT tokens"
+- ✅ "Add form validation for case creation"
+- ✅ "Fix document upload error handling"
+- ✅ "Update dashboard layout for mobile responsiveness"
+
+**Bad Examples:**
+- ❌ "User login" (too vague)
+- ❌ "Fix bug" (no context)
+- ❌ "Make it work" (not actionable)
+
+### Structuring Issue Descriptions
+
+**Required Sections:**
+1. **Goal** - Clear statement of what needs to be accomplished
+2. **Context** - Background information and rationale
+3. **AC** - Acceptance Criteria (specific, testable requirements)
+4. **Tech Notes** - Technical considerations, assumptions, or constraints
+5. **Estimate** - Development effort estimate
+
+**Optional Sections:**
+- **Design** - UI/UX requirements or mockups
+- **Testing** - Specific test scenarios
+- **Dependencies** - Related issues or blocking items
+
+### Acceptance Criteria Best Practices
+
+**Characteristics:**
+- **Specific**: Clear, unambiguous requirements
+- **Measurable**: Can be verified as done/not done
+- **Actionable**: Break down into implementable tasks
+- **Testable**: Can be validated through testing
+
+**Format:**
+```markdown
+## AC:
+
+### 1. Feature Requirements
+- [ ] Specific requirement 1
+- [ ] Specific requirement 2
+
+### 2. UI/UX Requirements
+- [ ] Visual requirement 1
+- [ ] Interaction requirement 1
+
+### 3. Testing Requirements
+- [ ] Test scenario 1 passes
+- [ ] Edge case handling verified
+```
+
+### Issue Description Template
+
+```markdown
+**Goal:** [Clear, concise statement of what needs to be built]
+
+**Context:** [Background, rationale, and business value]
+
+**AC:**
+
+### 1. Core Functionality
+- [ ] Requirement 1
+- [ ] Requirement 2
+
+### 2. User Experience
+- [ ] UX requirement 1
+- [ ] UX requirement 2
+
+### 3. Technical Requirements
+- [ ] Tech requirement 1
+- [ ] Tech requirement 2
+
+**Tech Notes:**
+- [Technical considerations, assumptions, constraints]
+- [API endpoints, database changes, dependencies]
+
+**Estimate:** X points (estimated time)
+```
+
+### Updating Descriptions During Development
+
+**When to Update:**
+- **Requirements change**: New information discovered during implementation
+- **Scope clarification**: Details become clearer during development
+- **Dependencies identified**: New blocking items found
+- **Technical approach refined**: Better understanding of implementation
+
+**How to Update:**
+1. **Keep original description** - Don't delete, just add updates
+2. **Use clear markers** - Indicate what changed and why
+3. **Update estimates** - Adjust if scope changed significantly
+4. **Communicate changes** - Mention updates in comments
+
+**Update Format:**
+```markdown
+**UPDATE 2024-01-15:** Clarified requirements based on discovery:
+- Added requirement for [new feature]
+- Updated estimate from 2 to 3 points
+
+**Previous requirements still apply.**
+```
+
+### Common Description Pitfalls to Avoid
+
+**❌ Too Vague:**
+- "Make the app better"
+- "Fix the issues"
+- "Add functionality"
+
+**❌ Missing Context:**
+- No explanation of why this is needed
+- No user impact described
+- No success criteria defined
+
+**❌ Poor Formatting:**
+- Wall of text without structure
+- No clear sections or headings
+- Inconsistent formatting
+
+**❌ Unrealistic Scope:**
+- Trying to do too much in one issue
+- No clear boundaries or scope definition
+- Dependencies not identified
+
+### Examples of Good vs Bad Descriptions
+
+**❌ Bad Example:**
+```
+Title: Fix login
+
+Description:
+Fix the login so it works. Users can't log in right now.
+```
+
+**✅ Good Example:**
+```
+Title: Fix user authentication error handling
+
+Description:
+**Goal:** Resolve authentication failures and improve error messaging for users
+
+**Context:** Users are experiencing login failures with unclear error messages, leading to support tickets and poor user experience
+
+**AC:**
+
+### 1. Error Handling
+- [ ] Display specific, user-friendly error messages for common auth failures
+- [ ] Implement retry mechanism for network-related auth errors
+- [ ] Log authentication failures for debugging
+
+### 2. User Experience
+- [ ] Show loading states during authentication
+- [ ] Provide clear feedback for invalid credentials
+- [ ] Remember email address across login attempts
+
+**Tech Notes:**
+- Review current JWT implementation
+- Check error response format from auth API
+- Consider implementing exponential backoff for retries
+
+**Estimate:** 3 points (~4-6 hours)
+```
+
 ## Development Workflow
 
 ### Starting Work
