@@ -33,14 +33,16 @@ jobs:
           npm run build
           echo "Static build completed"
 
-      - name: Deploy static build to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: redd-web
-          directory: apps/web/out
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+      - name: Deploy to Cloudflare Pages
+        run: |
+          cd apps/web
+          echo "Deploying static build to Cloudflare Pages..."
+          echo "Account ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"
+          ls -la out/
+          npx wrangler pages deploy out --compatibility-date=2025-04-01
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Output deployment URL
         run: echo "Deployment completed. Check Cloudflare Pages dashboard for live URL."
