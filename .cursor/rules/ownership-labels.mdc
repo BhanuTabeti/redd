@@ -20,7 +20,7 @@ REDD uses **assignee-based ownership** rather than label-based ownership. This e
 
 ### When Creating Issues:
 - **Claude PM** creates tickets (unassigned initially)
-- **Cursor Dev** claims tickets by self-assigning (`assignee: "me"` or `assignee: "cursor"`)
+- **Cursor Dev** claims tickets by self-assigning (`assignee: "cursor"`)
 - Use **type labels** for categorization: `frontend`, `backend`, `ml`, `infra`, `design`, `security`, `docs`
 - Use **priority labels**: `p0` (urgent), `p1` (high), `p2` (normal)
 - Use **version labels**: `v1`, `v2`, etc.
@@ -38,7 +38,7 @@ REDD uses **assignee-based ownership** rather than label-based ownership. This e
 mcp_linear_update_issue({
   id: "issue-id",
   state: "In Progress",
-  assignee: "me"  // Self-assign as Cursor
+  assignee: "cursor"  // Self-assign as Cursor
 })
 
 // ✅ Correct: Create unassigned ticket for Claude PM to assign or Cursor to claim
@@ -61,7 +61,7 @@ mcp_linear_list_issues({
 
 ### Claiming Tickets
 1. **Find unassigned tickets**: Use `list_issues(assignee: null, labels: ["frontend"])`
-2. **Claim by self-assigning**: `update_issue(id: "issue-id", assignee: "me", state: "In Progress")`
+2. **Claim by self-assigning**: `update_issue(id: "issue-id", assignee: "cursor", state: "In Progress")`
 3. **Comment your plan**: `create_comment(issueId: "issue-id", body: "Plan: Implement component with X, Y, Z")`
 
 ### Coordination
@@ -74,7 +74,7 @@ mcp_linear_list_issues({
 ### Finding Your Work
 ```typescript
 // Get your assigned tickets
-mcp_linear_list_issues({ assignee: "me" })
+mcp_linear_list_issues({ assignee: "cursor" })
 
 // Get unassigned tickets in your area
 mcp_linear_list_issues({
@@ -94,7 +94,7 @@ mcp_linear_list_issues({
 ### Coordination Workflow
 1. **Claude PM** creates ticket (unassigned) with proper labels
 2. **Cursor Dev** finds unassigned tickets: `list_issues(assignee: null, labels: ["frontend"])`
-3. **Cursor Dev** claims by self-assigning: `update_issue(assignee: "me", state: "In Progress")`
+3. **Cursor Dev** claims by self-assigning: `update_issue(assignee: "cursor", state: "In Progress")`
 4. **Both** use Linear comments with @mentions for coordination
 5. **Cursor Dev** requests review when PR is ready
 6. **Claude PM** reviews and moves to "Done" when merged
@@ -113,7 +113,7 @@ mcp_linear_create_issue({
 // Cursor claims it
 mcp_linear_update_issue({
   id: "issue-id",
-  assignee: "me",
+  assignee: "cursor",
   state: "In Progress"
 })
 

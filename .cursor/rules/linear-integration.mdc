@@ -23,7 +23,7 @@ globs: **/*
 ### Starting Work
 
 1. **Find Unassigned Tickets**: Use `list_issues` with `assignee: null` and relevant labels
-2. **Claim by Self-Assigning**: Move to "In Progress" AND assign to yourself (`assignee: "me"`)
+2. **Claim by Self-Assigning**: Move to "In Progress" AND assign to Cursor (`assignee: "cursor"`)
 3. **Comment Plan**: Add a comment explaining your approach
 
 ```typescript
@@ -31,7 +31,7 @@ globs: **/*
 mcp_linear_update_issue({
   "id": "issue-id",
   "state": "In Progress",
-  "assignee": "me"  // Self-assign as Cursor
+  "assignee": "cursor"  // Self-assign as Cursor
 })
 
 // ✅ Correct: Find unassigned work to claim
@@ -102,11 +102,11 @@ mcp_linear_list_issues({"project": "REDD v1"})
 mcp_linear_update_issue({
   "id": "issue-id",
   "state": "In Progress",
-  "assignee": "me"
+  "assignee": "cursor"
 })
 
 // ✅ Correct: Find your assigned tickets
-mcp_linear_list_issues({"assignee": "me"})
+mcp_linear_list_issues({"assignee": "cursor"})
 
 // ✅ Correct: Find unassigned work to claim
 mcp_linear_list_issues({
