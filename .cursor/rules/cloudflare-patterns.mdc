@@ -1,0 +1,251 @@
+---
+alwaysApply: true
+description: Cloudflare Workers, D1, R2, and Queues patterns for REDD backend
+globs: **/*.ts,**/*.js
+---
+
+# Cloudflare Workers Patterns
+
+## Basic Worker Handler
+```typescript
+export default {
+  async fetch(request: Request, env: CloudflareEnv, ctx: ExecutionContext): Promise<Response> {
+    try {
+      // Handle different HTTP methods
+      switch (request.method) {
+        case 'GET':
+          return await handleGET(request, env);
+        case 'POST':
+          return await handlePOST(request, env);
+        case 'PUT':
+          return await handlePUT(request, env);
+        case 'DELETE':
+          return await handleDELETE(request, env);
+        default:
+          return new Response('Method not allowed', { status: 405 });
+      }
+    } catch (error) {
+      console.error('Worker error:', error);
+      return new Response('Internal server error', { status: 500 });
+    }
+  }
+} satisfies ExportedHandler<CloudflareEnv>;
+```
+
+## Environment Bindings Access
+```typescript
+// Access environment variables and bindings
+const corsHeaders = {
+  'Access-Control-Allow-Origin': env.CORS_ORIGIN || '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+function getEnvVar(env: CloudflareEnv, key: string, defaultValue?: string): string {
+  return env[key] || defaultValue || '';
+}
+```
+
+## D1 Database Patterns
+
+### Database Connection
+```typescript
+// D1 Database binding
+interface CloudflareEnv {
+  DB: D1Database;
+}
+```
+
+### Basic Queries
+```typescript
+// SELECT query
+async function getMatters(env: CloudflareEnv): Promise<any[]> {
+  const { results } = await env.DB.prepare(
+    'SELECT * FROM matters WHERE status = ? ORDER BY created_at DESC'
+  ).bind('active').all();
+
+  return results;
+}
+
+// INSERT query
+async function createMatter(env: CloudflareEnv, matter: any): Promise<D1Result> {
+  return await env.DB.prepare(
+    'INSERT INTO matters (id, name, status, created_at) VALUES (?, ?, ?, ?)'
+  ).bind(matter.id, matter.name, matter.status, new Date().toISOString()).run();
+}
+
+// UPDATE query
+async function updateMatterStatus(env: CloudflareEnv, id: string, status: string): Promise<D1Result> {
+  return await env.DB.prepare(
+    'UPDATE matters SET status = ?, updated_at = ? WHERE id = ?'
+  ).bind(status, new Date().toISOString(), id).run();
+}
+
+// DELETE query
+async function deleteMatter(env: CloudflareEnv, id: string): Promise<D1Result> {
+  return await env.DB.prepare('DELETE FROM matters WHERE id = ?').bind(id).run();
+}
+```
+
+### Transactions
+```typescript
+async function transferMatterWithTransaction(env: CloudflareEnv, matterId: string, newOwnerId: string): Promise<void> {
+  await env.DB.batch([
+    env.DB.prepare('UPDATE matters SET owner_id = ? WHERE id = ?').bind(newOwnerId, matterId),
+    env.DB.prepare('INSERT INTO audit_log (matter_id, action, timestamp) VALUES (?, ?, ?)')
+      .bind(matterId, 'TRANSFERRED', new Date().toISOString())
+  ]);
+}
+```
+
+## R2 Storage Patterns
+
+### File Upload
+```typescript
+async function uploadFile(env: CloudflareEnv, file: File, key: string): Promise<void> {
+  await env.BUCKET.put(key, file.stream(), {
+    httpMetadata: {
+      contentType: file.type,
+      cacheControl: 'public, max-age=31536000',
+    },
+  });
+}
+
+async function uploadFromRequest(env: CloudflareEnv, request: Request, key: string): Promise<Response> {
+  const formData = await request.formData();
+  const file = formData.get('file') as File;
+
+  if (!file) {
+    return new Response('No file provided', { status: 400 });
+  }
+
+  await uploadFile(env, file, key);
+  return new Response('File uploaded successfully', { status: 200 });
+}
+```
+
+### File Download
+```typescript
+async function downloadFile(env: CloudflareEnv, key: string): Promise<ReadableStream | null> {
+  const object = await env.BUCKET.get(key);
+  return object?.body || null;
+}
+
+async function serveFile(env: CloudflareEnv, key: string): Promise<Response> {
+  const object = await env.BUCKET.get(key);
+
+  if (!object) {
+    return new Response('File not found', { status: 404 });
+  }
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set('etag', object.httpEtag);
+
+  return new Response(object.body, { headers });
+}
+```
+
+## Queue Patterns
+
+### Send Message to Queue
+```typescript
+async function queueOCRProcessing(env: CloudflareEnv, documentId: string, fileKey: string): Promise<void> {
+  await env.OCR_QUEUE.send({
+    documentId,
+    fileKey,
+    timestamp: new Date().toISOString(),
+    priority: 'normal'
+  });
+}
+
+async function queueBatchProcessing(env: CloudflareEnv, batchId: string, items: any[]): Promise<void> {
+  await env.BATCH_QUEUE.send({
+    batchId,
+    items,
+    totalItems: items.length,
+    timestamp: new Date().toISOString()
+  });
+}
+```
+
+### Queue Consumer
+```typescript
+export default {
+  async queue(batch: MessageBatch<any>, env: CloudflareEnv): Promise<void> {
+    for (const message of batch.messages) {
+      try {
+        await processQueueMessage(message, env);
+        message.ack();
+      } catch (error) {
+        console.error('Queue processing error:', error);
+        message.retry();
+      }
+    }
+  }
+} satisfies QueueConsumer<CloudflareEnv>;
+```
+
+## Cron Patterns
+
+### Scheduled Handler
+```typescript
+export default {
+  async scheduled(event: ScheduledEvent, env: CloudflareEnv, ctx: ExecutionContext): Promise<void> {
+    console.log('Cron triggered:', event.cron);
+
+    switch (event.cron) {
+      case '0 0 * * *': // Daily at midnight
+        await generateDailyReport(env);
+        break;
+      case '0 */6 * * *': // Every 6 hours
+        await cleanupOldFiles(env);
+        break;
+      case '0 9 * * 1': // Weekly on Monday at 9 AM
+        await sendWeeklyDigest(env);
+        break;
+    }
+  }
+} satisfies ScheduledHandler<CloudflareEnv>;
+```
+
+## TypeScript Environment Interface
+
+```typescript
+// cloudflare-env.d.ts
+interface CloudflareEnv {
+  // Environment Variables
+  NODE_ENV: string;
+  DATABASE_URL?: string;
+  OPENAI_API_KEY?: string;
+
+  // Bindings
+  ASSETS: Fetcher; // Static assets
+
+  // Database
+  DB: D1Database;
+
+  // Storage
+  BUCKET: R2Bucket;
+  TEMP_BUCKET?: R2Bucket;
+
+  // Queues
+  OCR_QUEUE: Queue;
+  EMAIL_QUEUE?: Queue;
+  BATCH_QUEUE: Queue;
+
+  // KV Storage
+  CACHE?: KVNamespace;
+  SESSIONS?: KVNamespace;
+
+  // Durable Objects
+  RATE_LIMITER?: DurableObjectNamespace;
+  WEBSOCKET_HUB?: DurableObjectNamespace;
+
+  // External Services
+  OPENAI?: Ai;
+
+  // Secrets (not logged)
+  SECRET_KEY?: string;
+}
+```

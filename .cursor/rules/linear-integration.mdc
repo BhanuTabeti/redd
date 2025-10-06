@@ -1,0 +1,134 @@
+---
+alwaysApply: true
+description: Linear project management integration patterns and workflows
+globs: **/*
+---
+
+# Linear Integration & Workflow
+
+## Project Management
+
+**Project**: REDD v1
+**Team**: Tabz
+**Project ID**: `e302c31c-0379-4855-9514-025b6eb8f2ef`
+
+### Workflow States
+
+- **Backlog**: New issues and unplanned work
+- **Todo**: Ready for development (equivalent to "In Review" in detailed workflow)
+- **In Progress**: Currently being worked on
+- **Done**: Completed and tested
+- **Canceled**: No longer needed (equivalent to "Blocked" in detailed workflow)
+
+### Starting Work
+
+1. **Find Unassigned Tickets**: Use `list_issues` with `assignee: null` and relevant labels
+2. **Claim by Self-Assigning**: Move to "In Progress" AND assign to yourself (`assignee: "me"`)
+3. **Comment Plan**: Add a comment explaining your approach
+
+```typescript
+// ✅ Correct: Self-assign when claiming tickets
+mcp_linear_update_issue({
+  "id": "issue-id",
+  "state": "In Progress",
+  "assignee": "me"  // Self-assign as Cursor
+})
+
+// ✅ Correct: Find unassigned work to claim
+mcp_linear_list_issues({
+  "assignee": null,
+  "labels": ["frontend", "p1"]
+})
+
+mcp_linear_create_comment({
+  "issueId": "issue-id",
+  "body": "Plan: Implement component with X, Y, Z"
+})
+```
+
+### Branch Strategy
+
+```
+feature/[ticket-number]-[short-description]
+fix/[ticket-number]-[short-description]
+chore/[ticket-number]-[short-description]
+```
+
+Examples:
+- `feature/tab-6-app-scaffold`
+- `fix/tab-7-form-validation`
+- `chore/tab-13-mock-data`
+
+### Pull Requests
+
+**Template**:
+```markdown
+## What
+- Brief description of changes
+
+## Why
+- User value / acceptance criteria
+
+## How
+- Key changes, assumptions, tradeoffs
+
+## Screenshots / Proof
+- Before/after screenshots or test results
+
+## Checklist
+- [ ] Tests added/updated
+- [ ] Handles error/empty/loading states
+- [ ] A11y quick pass
+- [ ] Linked issue: Fixes TAB-###
+```
+
+**PR Title**: `[TAB-###] Brief description`
+
+### Completing Work
+
+1. **Create PR**: Link to Linear issue in description
+2. **Request Review**: Assign to PM for review
+3. **Update Linear**: Move issue to "Done" when PR merges
+4. **Comment Results**: Add summary of what was implemented
+
+## Key Commands
+
+### Linear Operations
+```typescript
+// Get project issues
+mcp_linear_list_issues({"project": "REDD v1"})
+
+// ✅ Correct: Self-assign when claiming tickets
+mcp_linear_update_issue({
+  "id": "issue-id",
+  "state": "In Progress",
+  "assignee": "me"
+})
+
+// ✅ Correct: Find your assigned tickets
+mcp_linear_list_issues({"assignee": "me"})
+
+// ✅ Correct: Find unassigned work to claim
+mcp_linear_list_issues({
+  "assignee": null,
+  "labels": ["frontend", "p1"]
+})
+
+// Create comment
+mcp_linear_create_comment({
+  "issueId": "issue-id",
+  "body": "Implementation complete with PR: [link]"
+})
+```
+
+### Git Operations
+```bash
+# Create feature branch
+git checkout -b feature/tab-6-app-scaffold
+
+# Commit with conventional format
+git commit -m "feat: scaffold Next.js app with layout and navigation"
+
+# Push and create PR
+git push origin feature/tab-6-app-scaffold
+```

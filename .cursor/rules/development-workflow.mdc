@@ -1,0 +1,147 @@
+---
+alwaysApply: true
+description: Development workflow, commands, and conventions for REDD
+globs: **/*
+---
+
+# Development Workflow & Commands
+
+## Development Commands
+```bash
+# Fast development with hot reload (Next.js)
+npm run dev
+
+# Build static export for deployment
+npm run build
+
+# Build output location
+apps/web/out/
+
+# Deployment: Automatic via Cloudflare Pages Git integration
+# (Push to main branch → Cloudflare builds and deploys)
+```
+
+## Wrangler Commands (Future Workers)
+```bash
+# When implementing backend Workers:
+
+# Start local development server
+npx wrangler dev
+
+# Tail logs in real-time
+npx wrangler tail
+
+# Check deployment status
+npx wrangler pages deployment list
+
+# View environment variables
+npx wrangler secret list
+
+# Generate types from wrangler.toml
+npm run cf-typegen
+```
+
+## Environment Setup
+```bash
+# Install dependencies
+cd apps/web && npm install
+
+# Build static site
+npm run build
+
+# Check build output
+ls -la out/
+
+# Note: Frontend uses static export (no environment variables needed for build)
+# Backend Workers will use env.VARIABLE_NAME, not process.env
+```
+
+## Branch Strategy
+
+```
+feature/[ticket-number]-[short-description]
+fix/[ticket-number]-[short-description]
+chore/[ticket-number]-[short-description]
+```
+
+Examples:
+- `feature/tab-6-app-scaffold`
+- `fix/tab-7-form-validation`
+- `chore/tab-13-mock-data`
+
+## Commit Conventions
+
+```bash
+# Format: type(scope): description
+git commit -m "feat: add case creation form with validation"
+git commit -m "fix: resolve document upload error handling"
+git commit -m "chore: update dependencies and type definitions"
+```
+
+Types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `test`
+
+## Pull Requests
+
+**Template**:
+```markdown
+## What
+- Brief description of changes
+
+## Why
+- User value / acceptance criteria
+
+## How
+- Key changes, assumptions, tradeoffs
+
+## Screenshots / Proof
+- Before/after screenshots or test results
+
+## Checklist
+- [ ] Tests added/updated
+- [ ] Handles error/empty/loading states
+- [ ] A11y quick pass
+- [ ] Linked issue: Fixes TAB-###
+```
+
+**PR Title**: `[TAB-###] Brief description`
+
+## Status Protocol
+
+### On start:
+- Claim issue, move to In Progress, comment plan
+- Create/update Notion Tech Note
+
+### On PR:
+- Paste link in Linear, request review from Claude PM
+- Update Changelog in Notion
+
+### On block:
+- Move to Blocked, comment cause + unblock proposal
+
+### On done:
+- Update Tech Note with screenshots
+- Mark acceptance criteria complete
+- Add Decision Log if needed
+
+## Definition of Done (each ticket)
+
+- Working code + tests; error/empty/loading states; basic a11y; analytics events if defined; linked PR merged; Linear → Done.
+- **UI Tickets Additional AC**: Tech Note page exists and is linked in Linear; Screenshots/GIF in Tech Note; E/E/L states demonstrated; Changelog entry created; If a decision was made, Decision Log entry exists.
+
+## KICKOFF CHECKLIST
+
+1) Ensure Linear project "REDD v1" exists with labels/states (v1, frontend, backend, ml, infra, design, security, docs, p0, p1).
+2) Import "M0 – UI Demo Flow" CSV if not present.
+3) Create repo scaffold (apps/web Next.js+Tailwind+shadcn/ui). Add PR template + CODEOWNERS.
+4) Start with "App scaffold", then the route tickets. Post preview link when ready.
+
+## DEFAULT STACK [ASSUMPTION]
+
+- Next.js/React + Tailwind (shadcn/ui), lucide-react
+
+## Working Agreement Updates
+
+- **PM**: Claude owns scope/priorities and Notion workspace
+- **Dev Lead**: Cursor owns implementation, PRs, tests, automations
+- **Documentation**: Notion is single source of truth
+- **Sync**: Use MCP when available, otherwise use NOTION_SYNC blocks in Linear

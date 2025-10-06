@@ -1,0 +1,332 @@
+---
+alwaysApply: true
+description: Code patterns and conventions for REDD development
+globs: **/*.ts,**/*.tsx,**/*.js,**/*.jsx
+---
+
+# Code Patterns & Conventions
+
+## React Component Patterns
+```typescript
+"use client";  // Use for interactive components
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+interface MyComponentProps {
+  title: string;
+  onAction?: () => void;
+}
+
+export default function MyComponent({ title, onAction }: MyComponentProps) {
+  const [state, setState] = useState("");
+
+  return (
+    <Card>
+      <Button onClick={() => setState("clicked")}>
+        {title}
+      </Button>
+    </Card>
+  );
+}
+```
+
+## shadcn/ui Component Usage
+```typescript
+// Import from @/components/ui
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+
+// Use with Tailwind classes
+<Button variant="default" size="lg" className="w-full">
+  Submit
+</Button>
+```
+
+## Error Handling Patterns
+```typescript
+// Don't expose internal errors
+async function safeHandler(request: Request, env: CloudflareEnv): Promise<Response> {
+  try {
+    return await processRequest(request, env);
+  } catch (error) {
+    console.error('Internal error:', error);
+
+    // Log error details for debugging
+    await logError(env, error, request);
+
+    // Return generic error to client
+    return new Response('Internal server error', {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+```
+
+## Input Validation
+```typescript
+function validateInput(input: any): boolean {
+  // Validate required fields
+  if (!input.id || typeof input.id !== 'string') return false;
+
+  // Validate data types
+  if (input.amount && typeof input.amount !== 'number') return false;
+
+  // Sanitize strings
+  input.name = input.name?.trim().substring(0, 100);
+
+  return true;
+}
+```
+
+## SQL Injection Prevention
+```typescript
+// ❌ Vulnerable
+const query = `SELECT * FROM users WHERE id = '${userId}'`;
+
+// ✅ Safe - use prepared statements
+const { results } = await env.DB.prepare(
+  'SELECT * FROM users WHERE id = ?'
+).bind(userId).all();
+```
+
+## Authentication Middleware
+```typescript
+async function authenticateRequest(request: Request, env: CloudflareEnv): Promise<{ user?: any; response?: Response }> {
+  const authHeader = request.headers.get('Authorization');
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { response: new Response('Unauthorized', { status: 401 }) };
+  }
+
+  const token = authHeader.slice(7);
+  const user = await verifyToken(env, token);
+
+  if (!user) {
+    return { response: new Response('Invalid token', { status: 401 }) };
+  }
+
+  return { user };
+}
+
+async function verifyToken(env: CloudflareEnv, token: string): Promise<any | null> {
+  // Verify JWT token
+  try {
+    return await verifyJWT(token, env.SECRET_KEY);
+  } catch {
+    return null;
+  }
+}
+```
+
+## File Upload Handler
+```typescript
+async function handleFileUpload(request: Request, env: CloudflareEnv): Promise<Response> {
+  if (request.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  const formData = await request.formData();
+  const file = formData.get('file') as File;
+  const matterId = formData.get('matterId') as string;
+
+  if (!file || !matterId) {
+    return new Response('Missing file or matterId', { status: 400 });
+  }
+
+  // Validate file type and size
+  if (file.size > 10 * 1024 * 1024) { // 10MB limit
+    return new Response('File too large', { status: 413 });
+  }
+
+  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+  if (!allowedTypes.includes(file.type)) {
+    return new Response('Invalid file type', { status: 400 });
+  }
+
+  // Generate unique key
+  const key = `matters/${matterId}/documents/${Date.now()}-${file.name}`;
+
+  // Upload to R2
+  await uploadFile(env, file, key);
+
+  // Queue OCR processing
+  await queueOCRProcessing(env, matterId, key);
+
+  return new Response(JSON.stringify({ key, status: 'uploaded' }), {
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+```
+
+## CORS Handler
+```typescript
+// Handle preflight OPTIONS requests
+async function handleRequest(request: Request, env: CloudflareEnv): Promise<Response> {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': env.CORS_ORIGIN || '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
+    });
+  }
+
+  // Add CORS headers to all responses
+  const response = await generateResponse(request, env);
+  response.headers.set('Access-Control-Allow-Origin', env.CORS_ORIGIN || '*');
+  return response;
+}
+```
+
+## Testing Patterns
+
+### Unit Tests
+```typescript
+// Test database operations
+describe('MatterService', () => {
+  it('should create matter successfully', async () => {
+    const mockEnv = createMockEnv();
+    const matter = { id: 'test-id', name: 'Test Matter' };
+
+    const result = await createMatter(mockEnv, matter);
+    expect(result.success).toBe(true);
+  });
+});
+
+// Test file operations
+describe('FileService', () => {
+  it('should upload file to R2', async () => {
+    const mockEnv = createMockEnv();
+    const file = new File(['test'], 'test.txt');
+
+    await uploadFile(mockEnv, file, 'test-key');
+    expect(mockEnv.BUCKET.put).toHaveBeenCalledWith('test-key', expect.anything());
+  });
+});
+```
+
+### Integration Tests
+```typescript
+// Test full request flow
+describe('API Integration', () => {
+  it('should handle complete matter creation flow', async () => {
+    const request = new Request('http://localhost/api/matters', {
+      method: 'POST',
+      body: JSON.stringify(testMatter),
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const response = await worker.fetch(request, env, ctx);
+    expect(response.status).toBe(201);
+
+    const created = await response.json();
+    expect(created.id).toBeDefined();
+  });
+});
+```
+
+## Performance Optimization
+
+### Bundle Optimization
+```typescript
+// Use dynamic imports for optional features
+const optionalModule = await import('./optional-feature');
+
+// Tree shaking for unused code
+export { usedFunction } from './utils';
+
+// Minimize runtime dependencies
+const minimalDeps = ['core-only'];
+```
+
+### Caching Strategies
+```typescript
+// Cache API responses
+async function getCachedData(env: CloudflareEnv, key: string): Promise<any> {
+  const cached = await env.CACHE?.get(key);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  const data = await fetchFreshData();
+  await env.CACHE?.put(key, JSON.stringify(data), {
+    expirationTtl: 3600 // 1 hour
+  });
+
+  return data;
+}
+```
+
+## Security Best Practices
+
+### Input Validation
+```typescript
+function validateInput(input: any): boolean {
+  // Validate required fields
+  if (!input.id || typeof input.id !== 'string') return false;
+
+  // Validate data types
+  if (input.amount && typeof input.amount !== 'number') return false;
+
+  // Sanitize strings
+  input.name = input.name?.trim().substring(0, 100);
+
+  return true;
+}
+```
+
+### SQL Injection Prevention
+```typescript
+// ❌ Vulnerable
+const query = `SELECT * FROM users WHERE id = '${userId}'`;
+
+// ✅ Safe - use prepared statements
+const { results } = await env.DB.prepare(
+  'SELECT * FROM users WHERE id = ?'
+).bind(userId).all();
+```
+
+## Troubleshooting Common Issues
+
+### process.env errors
+```typescript
+// ❌ Wrong - doesn't work in Workers without nodejs_compat
+const apiKey = process.env.OPENAI_API_KEY;
+
+// ✅ Correct - use env parameter
+async function handler(request: Request, env: CloudflareEnv) {
+  const apiKey = env.OPENAI_API_KEY;
+}
+```
+
+### 3MB bundle size limit
+- Monitor bundle size: `npx wrangler deploy --dry-run`
+- Split large files into chunks
+- Use dynamic imports for optional features
+- Remove unused dependencies
+
+### Memory issues with large files
+```typescript
+// Stream large files instead of loading into memory
+async function processLargeFile(env: CloudflareEnv, fileKey: string): Promise<void> {
+  const object = await env.BUCKET.get(fileKey, {
+    range: { offset: 0, length: 1024 * 1024 } // Process in 1MB chunks
+  });
+
+  if (object) {
+    const reader = object.body.getReader();
+    let chunk;
+    while (!(chunk = await reader.read()).done) {
+      await processChunk(chunk.value);
+    }
+  }
+}
+```

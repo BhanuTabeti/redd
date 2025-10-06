@@ -1,0 +1,125 @@
+---
+alwaysApply: true
+description: Documents the Linear user account system and assignee-based ownership workflow for Claude PM and Cursor Dev collaboration
+globs: **/*
+---
+
+# Linear User Account & Ownership
+
+## Cursor's Linear User Account
+
+Cursor has a Linear user account for proper ticket assignment:
+
+- **Username**: `cursor`
+- **User ID**: `81cfe7b9-c05c-4639-8565-f96dc521eb98`
+- **Email**: `afd5064f-8c2e-4f60-a91a-2b753321d325@oauthapp.linear.app`
+
+## Assignee-Based Workflow
+
+REDD uses **assignee-based ownership** rather than label-based ownership. This ensures proper accountability and notification routing.
+
+### When Creating Issues:
+- **Claude PM** creates tickets (unassigned initially)
+- **Cursor Dev** claims tickets by self-assigning (`assignee: "me"` or `assignee: "cursor"`)
+- Use **type labels** for categorization: `frontend`, `backend`, `ml`, `infra`, `design`, `security`, `docs`
+- Use **priority labels**: `p0` (urgent), `p1` (high), `p2` (normal)
+- Use **version labels**: `v1`, `v2`, etc.
+
+### All Issues Should Have:
+- **Assignee** (for ownership) OR leave unassigned for claiming
+- **Type labels**: frontend, backend, ml, infra, design, security, docs
+- **Priority labels**: p0, p1, p2
+- **Version labels**: v1, v2, etc.
+
+### Example Linear MCP Calls:
+
+```typescript
+// ✅ Correct: Self-assign when claiming tickets
+mcp_linear_update_issue({
+  id: "issue-id",
+  state: "In Progress",
+  assignee: "me"  // Self-assign as Cursor
+})
+
+// ✅ Correct: Create unassigned ticket for Claude PM to assign or Cursor to claim
+mcp_linear_create_issue({
+  title: "Implement user authentication",
+  description: "...",
+  team: "Tabz",
+  labels: ["frontend", "v1", "p1"]
+  // No assignee initially - let Cursor claim it
+})
+
+// ✅ Correct: Find unassigned work to claim
+mcp_linear_list_issues({
+  assignee: null,
+  labels: ["frontend"]
+})
+```
+
+## Workflow
+
+### Claiming Tickets
+1. **Find unassigned tickets**: Use `list_issues(assignee: null, labels: ["frontend"])`
+2. **Claim by self-assigning**: `update_issue(id: "issue-id", assignee: "me", state: "In Progress")`
+3. **Comment your plan**: `create_comment(issueId: "issue-id", body: "Plan: Implement component with X, Y, Z")`
+
+### Coordination
+- **Claude PM** creates tickets (unassigned) and handles planning/architecture
+- **Cursor Dev** claims implementation tickets by self-assigning
+- **Both** use Linear comments for coordination
+- Use @mentions in comments: "@Claude PM" or "@Cursor"
+- Labels are for categorization only, NOT ownership
+
+### Finding Your Work
+```typescript
+// Get your assigned tickets
+mcp_linear_list_issues({ assignee: "me" })
+
+// Get unassigned tickets in your area
+mcp_linear_list_issues({
+  assignee: null,
+  labels: ["frontend", "backend"]
+})
+```
+
+## Claude PM Coordination
+
+### How Claude PM Creates Tickets
+- **Claude PM** creates tickets with appropriate type/priority/version labels
+- **Tickets start unassigned** - this allows Cursor to claim them
+- **Claude PM** focuses on: planning, architecture, PRDs, infrastructure, documentation
+- **Cursor Dev** focuses on: implementation, code, PRs, technical execution
+
+### Coordination Workflow
+1. **Claude PM** creates ticket (unassigned) with proper labels
+2. **Cursor Dev** finds unassigned tickets: `list_issues(assignee: null, labels: ["frontend"])`
+3. **Cursor Dev** claims by self-assigning: `update_issue(assignee: "me", state: "In Progress")`
+4. **Both** use Linear comments with @mentions for coordination
+5. **Cursor Dev** requests review when PR is ready
+6. **Claude PM** reviews and moves to "Done" when merged
+
+### Example Coordination
+```typescript
+// Claude PM creates ticket
+mcp_linear_create_issue({
+  title: "Implement user authentication",
+  description: "...",
+  team: "Tabz",
+  labels: ["frontend", "v1", "p1"]
+  // Unassigned initially
+})
+
+// Cursor claims it
+mcp_linear_update_issue({
+  id: "issue-id",
+  assignee: "me",
+  state: "In Progress"
+})
+
+// Cursor requests review when PR ready
+mcp_linear_create_comment({
+  issueId: "issue-id",
+  body: "@Claude PM PR ready for review: https://github.com/..."
+})
+```

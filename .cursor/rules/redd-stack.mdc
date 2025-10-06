@@ -1,0 +1,123 @@
+---
+alwaysApply: true
+description: REDD development stack patterns and conventions
+globs: **/*
+---
+
+# REDD Development Stack
+
+## Current Stack
+- **Frontend**: Next.js 15.5.4 + React 19 + TypeScript
+- **Styling**: Tailwind CSS v3.4.17 + shadcn/ui components
+- **Deployment**: Cloudflare Pages (Git integration)
+- **Future Backend**: Cloudflare Workers + D1 + R2 + Queues
+
+## Next.js Configuration (Static Export)
+```typescript
+// next.config.ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  // Development optimization
+  turbopack: process.env.NODE_ENV === 'development' ? {} : undefined,
+
+  // Static export for Cloudflare Pages
+  output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true  // Required for static export
+  },
+
+  serverExternalPackages: [],
+};
+
+export default nextConfig;
+```
+
+## Tailwind CSS v3 Setup
+```typescript
+// tailwind.config.ts
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  darkMode: ["class"],
+  content: [
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        // ... etc (use HSL format, not oklch)
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+    },
+  },
+  plugins: [],
+};
+```
+
+## Component Patterns
+```typescript
+"use client";  // Use for interactive components
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+export default function MyComponent() {
+  const [state, setState] = useState("");
+
+  return (
+    <Card>
+      <Button onClick={() => setState("clicked")}>
+        Click me
+      </Button>
+    </Card>
+  );
+}
+```
+
+## Deployment & Build Configuration
+
+### Cloudflare Pages Deployment
+```bash
+# Automatic deployment via Git integration
+# Push to main → Cloudflare builds and deploys automatically
+
+# Build command (configured in Cloudflare):
+cd apps/web && npm install && npm run build
+
+# Build output directory:
+apps/web/out
+
+# Environment variables (set in Cloudflare dashboard):
+NODE_VERSION=20
+```
+
+### Local Development
+```bash
+# Development with hot reload
+npm run dev
+
+# Build for production (static export)
+npm run build
+
+# Output: apps/web/out/ directory
+```
+
+## Important Notes
+- **No Wrangler deployment** for frontend (uses Cloudflare Pages Git integration)
+- **Static export only** - No SSR, no API routes in Next.js
+- **Use Tailwind v3** - v4 has native binary issues in CI environments
+- **All images unoptimized** - Required for static export

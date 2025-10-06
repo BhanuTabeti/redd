@@ -1,0 +1,229 @@
+---
+alwaysApply: true
+description: Common issues and troubleshooting patterns for REDD development
+globs: **/*
+---
+
+# Troubleshooting Common Issues
+
+## 1. Tailwind CSS v4 / lightningcss errors
+
+**Problem**: Tailwind v4 uses lightningcss (Rust native binary) causing "Cannot find module '../lightningcss.linux-x64-gnu.node'" in CI
+
+**Solution**: Use Tailwind CSS v3
+```typescript
+// v3 is pure JavaScript, no native binaries, works everywhere
+"devDependencies": {
+  "tailwindcss": "^3.4.17",
+  "postcss": "^8.4.49",
+  "autoprefixer": "^10.4.20"
+}
+
+// Config for v3:
+// - Use @tailwind directives (not @import)
+// - Use HSL color format (not oklch)
+// - Standard postcss.config.mjs with tailwindcss + autoprefixer plugins
+```
+
+## 2. process.env errors
+
+**Problem**: `process.env` doesn't work in Workers without nodejs_compat
+
+**Solution**: Use env parameter
+```typescript
+// ❌ Wrong
+const apiKey = process.env.OPENAI_API_KEY;
+
+// ✅ Correct
+async function handler(request: Request, env: CloudflareEnv) {
+  const apiKey = env.OPENAI_API_KEY;
+}
+```
+
+## 3. 3MB bundle size limit
+
+**Solutions**:
+- Monitor bundle size: `npx wrangler deploy --dry-run`
+- Split large files into chunks
+- Use dynamic imports for optional features
+- Remove unused dependencies
+
+## 4. Timeout errors
+
+**Solutions**:
+```typescript
+// Set timeout for long-running operations
+ctx.waitUntil(longRunningTask());
+
+// Or use alarm for background tasks
+async function scheduleBackgroundTask(env: CloudflareEnv, delay: number) {
+  await env.RATE_LIMITER.idFromName('background-tasks').fetch('https://background-tasks/alarm', {
+    method: 'POST',
+    body: JSON.stringify({ delay })
+  });
+}
+```
+
+## 5. Memory issues with large files
+
+**Solution**: Stream large files instead of loading into memory
+```typescript
+async function processLargeFile(env: CloudflareEnv, fileKey: string): Promise<void> {
+  const object = await env.BUCKET.get(fileKey, {
+    range: { offset: 0, length: 1024 * 1024 } // Process in 1MB chunks
+  });
+
+  if (object) {
+    const reader = object.body.getReader();
+    let chunk;
+    while (!(chunk = await reader.read()).done) {
+      await processChunk(chunk.value);
+    }
+  }
+}
+```
+
+## 6. Database connection issues
+
+**Solution**: Check database connectivity
+```typescript
+async function testDatabase(env: CloudflareEnv): Promise<boolean> {
+  try {
+    await env.DB.prepare('SELECT 1').first();
+    return true;
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    return false;
+  }
+}
+```
+
+## 7. CORS errors
+
+**Solution**: Handle preflight OPTIONS requests
+```typescript
+async function handleRequest(request: Request, env: CloudflareEnv): Promise<Response> {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': env.CORS_ORIGIN || '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
+    });
+  }
+
+  // Add CORS headers to all responses
+  const response = await generateResponse(request, env);
+  response.headers.set('Access-Control-Allow-Origin', env.CORS_ORIGIN || '*');
+  return response;
+}
+```
+
+## 8. Environment variable issues
+
+**Problem**: Environment variables not available in Workers
+
+**Solution**: Use Cloudflare env bindings
+```typescript
+// In wrangler.toml
+[vars]
+NODE_ENV = "production"
+OPENAI_API_KEY = "your-key"
+
+// Access in code
+async function handler(request: Request, env: CloudflareEnv) {
+  const apiKey = env.OPENAI_API_KEY; // Not process.env
+}
+```
+
+## 9. Import errors
+
+**Problem**: Module resolution issues in Workers
+
+**Solution**: Check import paths and use relative imports
+```typescript
+// ❌ Wrong
+import { helper } from 'utils/helper';
+
+// ✅ Correct
+import { helper } from './utils/helper';
+```
+
+## 10. TypeScript errors
+
+**Problem**: Type definitions not found
+
+**Solution**: Install types and check tsconfig.json
+```bash
+npm install --save-dev @types/node @types/react @types/react-dom
+
+// Check tsconfig.json paths
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
+
+## 11. Build errors
+
+**Problem**: Build failures in CI/CD
+
+**Common fixes**:
+- Check Node.js version compatibility
+- Clear npm cache: `npm cache clean --force`
+- Delete node_modules and reinstall: `rm -rf node_modules && npm install`
+- Check for peer dependency conflicts: `npm ls`
+
+## 12. Performance issues
+
+**Bundle analysis**:
+```bash
+# Analyze bundle size
+npx webpack-bundle-analyzer dist/stats.json
+
+# Check for large dependencies
+npm run build --analyze
+```
+
+**Optimization tips**:
+- Use code splitting for routes
+- Lazy load heavy components
+- Optimize images and assets
+- Use CDN for static assets
+
+## 13. Runtime errors
+
+**Debugging tips**:
+- Check browser console for client-side errors
+- Use `wrangler tail` for real-time Worker logs
+- Add logging to identify failure points
+- Test with different environments
+
+## 14. Security issues
+
+**Common fixes**:
+- Validate all user inputs
+- Use prepared statements for database queries
+- Implement proper authentication/authorization
+- Set secure headers (CSP, HSTS, etc.)
+- Use HTTPS only
+
+## 15. Deployment issues
+
+**Cloudflare Pages**:
+- Check build logs in Cloudflare dashboard
+- Verify _headers and _redirects files
+- Ensure static export is properly configured
+- Check environment variables are set
+
+**Workers**:
+- Monitor error rates in Cloudflare dashboard
+- Check KV/DO/D1 quotas and limits
+- Review cold start performance
+- Test with wrangler dev before deploying

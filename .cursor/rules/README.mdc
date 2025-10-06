@@ -1,0 +1,117 @@
+---
+alwaysApply: true
+description: Overview of all available Cursor Rules for REDD development
+globs: **/*
+---
+
+# REDD Cursor Rules
+
+This document provides an overview of all available Cursor Rules for REDD (Real Estate Due Diligence) development.
+
+## Available Rules
+
+### 1. [ownership-labels.mdc](mdc:ownership-labels.mdc)
+**Purpose**: Documents the Linear user account system and assignee-based ownership workflow for Claude PM and Cursor Dev collaboration
+**Applies to**: All files
+**Key Topics**:
+- Cursor's Linear user account (username: cursor)
+- Assignee-based ownership workflow
+- Issue creation and claiming guidelines
+- Claude PM and Cursor Dev coordination
+
+### 2. [linear-integration.mdc](mdc:linear-integration.mdc)
+**Purpose**: Linear project management integration patterns and workflows
+**Applies to**: All files
+**Key Topics**:
+- Project structure and states
+- Branch naming conventions
+- PR templates and processes
+- Status protocols
+
+### 3. [notion-integration.mdc](mdc:notion-integration.mdc)
+**Purpose**: Notion integration and PM workflow protocol for documentation
+**Applies to**: All files
+**Key Topics**:
+- Tech Notes creation
+- Changelog management
+- Decision Log entries
+- NOTION_SYNC fallback protocol
+
+### 4. [redd-stack.mdc](mdc:redd-stack.mdc)
+**Purpose**: REDD development stack patterns and conventions
+**Applies to**: All files
+**Key Topics**:
+- Next.js static export configuration
+- Tailwind CSS v3 setup
+- Cloudflare Pages deployment
+- Component patterns
+
+### 5. [cloudflare-patterns.mdc](mdc:cloudflare-patterns.mdc)
+**Purpose**: Cloudflare Workers, D1, R2, and Queues patterns for REDD backend
+**Applies to**: TypeScript/JavaScript files
+**Key Topics**:
+- Worker handlers and middleware
+- Database operations (D1)
+- File storage (R2)
+- Queue processing
+- Cron jobs
+
+### 6. [code-patterns.mdc](mdc:code-patterns.mdc)
+**Purpose**: Code patterns and conventions for REDD development
+**Applies to**: TypeScript/JavaScript files
+**Key Topics**:
+- React component patterns
+- shadcn/ui usage
+- Error handling
+- Security best practices
+- Testing patterns
+
+### 7. [development-workflow.mdc](mdc:development-workflow.mdc)
+**Purpose**: Development workflow, commands, and conventions for REDD
+**Applies to**: All files
+**Key Topics**:
+- Development commands
+- Branch strategy
+- Commit conventions
+- PR processes
+- Definition of Done
+
+### 8. [troubleshooting.mdc](mdc:troubleshooting.mdc)
+**Purpose**: Common issues and troubleshooting patterns for REDD development
+**Applies to**: All files
+**Key Topics**:
+- Tailwind CSS issues
+- Environment variable problems
+- Bundle size limits
+- Memory management
+- Performance optimization
+
+## How to Use These Rules
+
+1. **Automatic Application**: Most rules are set to `alwaysApply: true` and will be automatically considered when working with relevant files.
+
+2. **Context-Aware**: Rules use glob patterns to apply to specific file types or all files as appropriate.
+
+3. **Reference Other Rules**: Use the format `[filename.ext](mdc:filename.ext)` to reference other rules within your code.
+
+4. **Search and Discovery**: Use the rule descriptions to find relevant patterns for your current task.
+
+## Contributing to Rules
+
+When adding new patterns or updating existing ones:
+
+1. Create new `.mdc` files in `.cursor/rules/`
+2. Use proper frontmatter with `alwaysApply`, `description`, and `globs`
+3. Follow the existing formatting and structure
+4. Test patterns work correctly in practice
+5. Update this README when adding new rules
+
+## Integration with Development
+
+These rules work alongside:
+- **Linear MCP**: For project management and issue tracking
+- **Notion MCP**: For documentation when available
+- **GitHub MCP**: For code management and PRs
+- **Local tooling**: Wrangler, Next.js, Tailwind, etc.
+
+The rules ensure consistency across the entire REDD development process, from planning through implementation to deployment.
