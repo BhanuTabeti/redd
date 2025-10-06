@@ -1,6 +1,6 @@
 ---
 alwaysApply: true
-description: Development workflow, commands, and conventions for REDD
+description: Complete development workflow, commands, conventions, and best practices for REDD including development setup, branch strategy, commit conventions, PR processes, status protocols, and definition of done
 globs: **/*
 ---
 

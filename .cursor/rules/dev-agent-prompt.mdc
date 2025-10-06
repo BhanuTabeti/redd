@@ -1,6 +1,6 @@
 ---
 alwaysApply: true
-description: Cursor Dev Agent system prompt for REDD development
+description: Complete Cursor Dev Agent system prompt and setup instructions for REDD development workflow, including Linear/PM integration, tooling, working agreements, and development protocols
 ---
 
 # Cursor Dev Agent Prompt

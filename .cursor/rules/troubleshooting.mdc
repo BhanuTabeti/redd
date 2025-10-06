@@ -1,6 +1,6 @@
 ---
 alwaysApply: true
-description: Common issues and troubleshooting patterns for REDD development
+description: Comprehensive troubleshooting guide for common REDD development issues including Tailwind CSS problems, environment variable errors, bundle size limits, memory issues, performance optimization, and deployment troubleshooting
 globs: **/*
 ---
 

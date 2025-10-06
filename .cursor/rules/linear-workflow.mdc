@@ -1,6 +1,6 @@
 ---
 alwaysApply: true
-description: Linear project management integration and workflow
+description: Complete Linear project management integration and workflow patterns for REDD, including project structure, workflow states, development processes, branch strategies, commit conventions, and PR templates
 ---
 
 # Linear Integration & Workflow

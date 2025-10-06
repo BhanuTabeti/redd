@@ -1,6 +1,6 @@
 ---
 alwaysApply: true
-description: Notion integration workflow and PM protocol for REDD development
+description: Complete Notion integration workflow and PM protocol for REDD development, including MCP integration, workspace structure, per-ticket protocols, acceptance criteria, fallback procedures, and working agreements
 ---
 
 # Notion Integration & PM Workflow Protocol

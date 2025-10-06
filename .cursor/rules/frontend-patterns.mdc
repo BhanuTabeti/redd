@@ -1,6 +1,6 @@
 ---
 globs: apps/web/src/**/*.{tsx,ts,jsx,js}
-description: Frontend development patterns and conventions for REDD
+description: Comprehensive frontend development patterns for REDD including React component structure, state management, form handling, API integration, styling conventions, accessibility guidelines, and performance optimizations
 ---
 
 # Frontend Development Patterns

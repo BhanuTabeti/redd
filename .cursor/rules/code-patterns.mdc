@@ -1,6 +1,6 @@
 ---
 alwaysApply: true
-description: Code patterns and conventions for REDD development
+description: Comprehensive code patterns and conventions for REDD development including React components, shadcn/ui usage, error handling, security practices, testing patterns, and performance optimization guidelines
 globs: **/*.ts,**/*.tsx,**/*.js,**/*.jsx
 ---
 

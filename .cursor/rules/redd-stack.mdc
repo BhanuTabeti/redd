@@ -1,6 +1,6 @@
 ---
 alwaysApply: true
-description: REDD development stack patterns and conventions
+description: Complete REDD development stack configuration and patterns including Next.js static export setup, Tailwind CSS v3 configuration, Cloudflare Pages deployment, and component architecture guidelines
 globs: **/*
 ---
 

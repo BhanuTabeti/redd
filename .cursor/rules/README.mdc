@@ -1,6 +1,6 @@
 ---
 alwaysApply: true
-description: Overview of all available Cursor Rules for REDD development
+description: Comprehensive overview of all available Cursor Rules for REDD development, including detailed descriptions of each rule file, usage guidelines, contribution instructions, and integration with development tooling
 globs: **/*
 ---
 
