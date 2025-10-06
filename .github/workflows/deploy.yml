@@ -25,8 +25,22 @@ jobs:
         run: |
           cd apps/web
           echo "Installing dependencies..."
-          npm install --no-audit --no-fund --verbose
-          echo "Dependencies installed successfully"
+          npm install --no-audit --no-fund
+          echo "Initial dependencies installed"
+
+      - name: Build for Cloudflare (with SWC patching)
+        run: |
+          cd apps/web
+          echo "Building for Cloudflare (this will patch SWC dependencies)..."
+          npm run build-open
+          echo "Build completed, checking if SWC dependencies need installation..."
+
+      - name: Install SWC dependencies if needed
+        run: |
+          cd apps/web
+          echo "Checking for SWC dependency updates..."
+          npm install --no-audit --no-fund
+          echo "SWC dependencies updated if needed"
 
       - name: Verify installation
         run: |
@@ -34,13 +48,6 @@ jobs:
           echo "Verifying Node.js version: $(node --version)"
           echo "Verifying npm version: $(npm --version)"
           npm list --depth=0
-
-      - name: Build for Cloudflare
-        run: |
-          cd apps/web
-          echo "Building for Cloudflare..."
-          npm run build-open
-          echo "Build completed successfully"
 
       - name: Deploy to Cloudflare Pages
         run: |
